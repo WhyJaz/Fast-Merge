@@ -39,6 +39,12 @@ export const useGitLabApi = () => {
   }, []);
 
   const sendRequest = useCallback((type: string, message?: any) => {
+    // 清除之前的响应数据，防止显示旧结果
+    setResponses(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(type);
+      return newMap;
+    });
     setLoading(prev => new Map(prev.set(type, true)));
     vscode.postMessage({ type, message });
   }, []);

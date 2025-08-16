@@ -131,6 +131,8 @@ export const MergePage: React.FC = () => {
   const handleSubmit = async () => {
     if (!selectedProject) return;
 
+    // 隐藏之前的结果，在新请求开始时清除旧结果
+    setShowResults(false);
     setIsSubmitting(true);
 
     if (mergeType === 'branch') {
