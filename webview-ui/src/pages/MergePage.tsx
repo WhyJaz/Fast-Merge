@@ -89,16 +89,19 @@ export const MergePage: React.FC = () => {
   // 当项目选择变化时，重置相关状态
   useEffect(() => {
     if (selectedProject) {
-      // 项目变化时重置分支和提交选择
+      // 项目变化时重置所有分支和提交选择
+      setSourceBranch(undefined); // 修复：添加清空源分支选择
       setTargetBranch(undefined);
       setSelectedCommits([]);
       setTargetBranches([]);
     }
   }, [selectedProject]);
 
-  // 当源分支变化且为cherry-pick模式时，自动获取最新提交
+  // 当源分支变化且为cherry-pick模式时，清空提交选择并自动获取最新提交
   useEffect(() => {
     if (selectedProject && sourceBranch && mergeType === 'cherry-pick') {
+      // 修复：先清空之前选择的提交
+      setSelectedCommits([]);
       // 自动获取该分支的最新提交并选中第一个
       getCommits(selectedProject.id, sourceBranch, '', 1, 1);
     }
@@ -116,6 +119,14 @@ export const MergePage: React.FC = () => {
       setSelectedCommits([commitsState.data[0].id]);
     }
   }, [commitsState.data, mergeType, selectedCommits.length]);
+
+  // 当合并类型变化时，清空相关选择
+  useEffect(() => {
+    // 修复规则3：切换合并类型时清空提交和目标分支选择
+    setSelectedCommits([]);
+    setTargetBranches([]);
+    setTargetBranch(undefined);
+  }, [mergeType]);
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
@@ -250,7 +261,7 @@ export const MergePage: React.FC = () => {
                     <BranchSelector
                       projectId={selectedProject?.id}
                       value={sourceBranch}
-                      onChange={setSourceBranch}
+                      onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
                       placeholder="选择源分支"
                       defaultBranch={currentRepoState.data?.currentBranch}
                     />
@@ -268,7 +279,7 @@ export const MergePage: React.FC = () => {
                     <BranchSelector
                       projectId={selectedProject?.id}
                       value={targetBranch}
-                      onChange={setTargetBranch}
+                      onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch[0] : branch)}
                       placeholder="选择目标分支"
                     />
                   </Form.Item>
@@ -288,7 +299,7 @@ export const MergePage: React.FC = () => {
                     <BranchSelector
                       projectId={selectedProject?.id}
                       value={sourceBranch}
-                      onChange={setSourceBranch}
+                      onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
                       placeholder="选择源分支"
                       defaultBranch={currentRepoState.data?.currentBranch}
                     />
