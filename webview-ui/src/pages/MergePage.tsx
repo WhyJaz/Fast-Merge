@@ -184,36 +184,6 @@ export const MergePage: React.FC = () => {
         />
       )}
 
-      {/* 当前工作区信息 */}
-      {currentRepoState.loading ? (
-        <Card style={{ marginBottom: 16 }}>
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <Spin />
-            <div style={{ marginTop: 8 }}>获取工作区信息中...</div>
-          </div>
-        </Card>
-      ) : currentRepoState.data?.isGitRepository ? (
-        <Alert
-          message={
-            <Space direction="vertical" size="small">
-              <span style={{fontSize: '16px', color: '#888'}}>工作区信息</span>
-              {currentRepoState.data.gitlabProjectPath && (
-                <div><Text strong>当前项目:</Text> {currentRepoState.data.gitlabProjectPath}</div>
-              )}
-              <div><Text strong>当前分支:</Text> {currentRepoState.data.currentBranch}</div>
-            </Space>
-          }
-          type="info"
-          style={{ marginBottom: 16 }}
-        />
-      ) : (
-        <Alert 
-          message="当前目录不是Git仓库" 
-          type="warning" 
-          style={{ marginBottom: 16 }} 
-        />
-      )}
-
       {/* 主要配置区域 */}
       <Card title="合并请求配置" style={{ marginBottom: 16 }}>
         <Form layout="vertical">

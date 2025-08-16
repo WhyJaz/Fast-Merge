@@ -118,7 +118,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
             }}>
               {commit.title}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+            {/* <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
               <Tag color="purple" style={{ margin: 0, fontSize: '11px' }}>
                 {commit.short_id}
               </Tag>
@@ -130,8 +130,8 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
                 <CalendarOutlined />
                 {formatDate(commit.authored_date)}
               </Text>
-            </div>
-            {commit.message !== commit.title && (
+            </div> */}
+            {/* {commit.message !== commit.title && (
               <Tooltip title={commit.message}>
                 <Text 
                   type="secondary" 
@@ -147,7 +147,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
                   {commit.message}
                 </Text>
               </Tooltip>
-            )}
+            )} */}
           </div>
         </div>
       </div>

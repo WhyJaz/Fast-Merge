@@ -131,7 +131,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
               }}>
                 {project.name}
               </div>
-              <Text 
+              {/* <Text 
                 type="secondary" 
                 style={{ 
                   fontSize: '12px',
@@ -142,7 +142,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
                 }}
               >
                 {project.namespace.full_path}
-              </Text>
+              </Text> */}
             </div>
           </div>
         </Option>

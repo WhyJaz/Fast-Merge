@@ -94,7 +94,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
             }}>
               {branch.name}
             </div>
-            <Text 
+            {/* <Text 
               type="secondary" 
               style={{ 
                 fontSize: '12px',
@@ -105,7 +105,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
               }}
             >
               {branch.commit.title}
-            </Text>
+            </Text> */}
           </div>
         </div>
         {/* <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
