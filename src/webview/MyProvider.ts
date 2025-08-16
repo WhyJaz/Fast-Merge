@@ -1,15 +1,26 @@
 import * as vscode from "vscode"
-import { WebviewMessage } from "../shared/WebviewMessage"
+import { WebviewMessage, AllWebviewMessages, ResponseMessage } from "../shared/WebviewMessage"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 import { LOCAL_PORT } from "../shared/constant"
+import { GitLabService } from "../api/gitlab-service"
+import { GitUtils } from "../utils/git-utils"
+import { ConfigManager } from "../utils/config-manager"
 
 
 class MyProvider implements vscode.WebviewViewProvider {
 	public static readonly sideBarId = "fast-merge.SidebarProvider"
 	private view?: vscode.WebviewView | vscode.WebviewPanel
+	private gitLabService: GitLabService
+	private gitUtils: GitUtils
+	private configManager: ConfigManager
+	private configWatcher?: vscode.Disposable
 
 	constructor(readonly context: vscode.ExtensionContext) {
+		this.gitLabService = new GitLabService()
+		this.gitUtils = new GitUtils()
+		this.configManager = new ConfigManager(context)
+		this.initializeConfig()
 	}
 
 	// 当webview视图被创建时调用
@@ -28,10 +39,15 @@ class MyProvider implements vscode.WebviewViewProvider {
 
 		this.setWebviewMessageListener(webviewView.webview)
 
+		// 延迟发送配置状态，确保webview已经准备好
+		setTimeout(() => {
+			this.sendConfigStatus()
+		}, 100)
 
 		// 监听webviewView的销毁
 		webviewView.onDidDispose(
 			async () => {
+				this.configWatcher?.dispose()
 			},
 			null,
 			[],
@@ -153,15 +169,297 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private setWebviewMessageListener(webview: vscode.Webview) {
 		// 监听来自webview的消息
 		webview.onDidReceiveMessage(
-			async (message: WebviewMessage) => {
-				switch (message.type) {
-					case "notify":
-						vscode.window.showInformationMessage('扩展层收到消息7')
-						this.postMessageToWebview('向webview层发送消息')
-						break
-				}
+			async (message: AllWebviewMessages) => {
+				await this.handleMessage(message)
 			}
 		)
+	}
+
+	// 处理来自webview的消息
+	private async handleMessage(message: AllWebviewMessages): Promise<void> {
+		try {
+			switch (message.type) {
+				case "notify":
+					vscode.window.showInformationMessage('扩展层收到消息')
+					this.postMessageToWebview('向webview层发送消息')
+					break
+
+				case "gitlab:getProjects":
+					await this.handleGetProjects(message.message)
+					break
+
+				case "gitlab:getBranches":
+					await this.handleGetBranches(message.message)
+					break
+
+				case "gitlab:getCommits":
+					await this.handleGetCommits(message.message)
+					break
+
+				case "gitlab:createMergeRequest":
+					await this.handleCreateMergeRequest(message.message)
+					break
+
+				case "gitlab:createCherryPickMR":
+					await this.handleCreateCherryPickMR(message.message)
+					break
+
+				case "gitlab:getCurrentRepo":
+					await this.handleGetCurrentRepo()
+					break
+
+				case "gitlab:setConfiguration":
+					await this.handleSetConfiguration(message.message)
+					break
+
+				case "config:open":
+					await this.handleOpenConfig()
+					break
+
+				case "config:reload":
+					await this.handleReloadConfig()
+					break
+
+				case "config:check":
+					await this.sendConfigStatus()
+					break
+
+				case "config:getInfo":
+					await this.sendConfigInfo()
+					break
+
+				default:
+					console.warn('未知消息类型:', message.type)
+			}
+		} catch (error: any) {
+			console.error('处理消息失败:', error)
+			this.sendResponse(message.type, false, null, error.message)
+		}
+	}
+
+	// 发送响应消息
+	private sendResponse(requestType: string, success: boolean, data?: any, error?: string): void {
+		const response: ResponseMessage = {
+			type: 'response',
+			message: {
+				requestType,
+				success,
+				data,
+				error
+			}
+		}
+		this.view?.webview.postMessage(response)
+	}
+
+	// 处理获取项目列表
+	private async handleGetProjects(params: { search?: string; page?: number; perPage?: number }): Promise<void> {
+		try {
+			const projects = await this.gitLabService.getProjects(params.search, params.page, params.perPage)
+			this.sendResponse('gitlab:getProjects', true, projects)
+		} catch (error: any) {
+			this.sendResponse('gitlab:getProjects', false, null, error.message)
+		}
+	}
+
+	// 处理获取分支列表
+	private async handleGetBranches(params: { projectId: number; search?: string }): Promise<void> {
+		try {
+			const branches = await this.gitLabService.getBranches(params.projectId, params.search)
+			this.sendResponse('gitlab:getBranches', true, branches)
+		} catch (error: any) {
+			this.sendResponse('gitlab:getBranches', false, null, error.message)
+		}
+	}
+
+	// 处理获取提交列表
+	private async handleGetCommits(params: { projectId: number; branch: string; search?: string; page?: number; perPage?: number }): Promise<void> {
+		try {
+			const commits = params.search 
+				? await this.gitLabService.searchCommits(params.projectId, params.branch, params.search, params.page, params.perPage)
+				: await this.gitLabService.getCommits(params.projectId, params.branch, params.search, params.page, params.perPage)
+			this.sendResponse('gitlab:getCommits', true, commits)
+		} catch (error: any) {
+			this.sendResponse('gitlab:getCommits', false, null, error.message)
+		}
+	}
+
+	// 处理创建合并请求
+	private async handleCreateMergeRequest(params: { projectId: number; options: any }): Promise<void> {
+		try {
+			const result = await this.gitLabService.createMergeRequest(params.projectId, params.options)
+			this.sendResponse('gitlab:createMergeRequest', result.success, result, result.error)
+		} catch (error: any) {
+			this.sendResponse('gitlab:createMergeRequest', false, null, error.message)
+		}
+	}
+
+	// 处理创建Cherry Pick合并请求
+	private async handleCreateCherryPickMR(params: { projectId: number; options: any }): Promise<void> {
+		try {
+			const results = await this.gitLabService.createCherryPickMergeRequests(params.projectId, params.options)
+			this.sendResponse('gitlab:createCherryPickMR', true, results)
+		} catch (error: any) {
+			this.sendResponse('gitlab:createCherryPickMR', false, null, error.message)
+		}
+	}
+
+	// 处理获取当前仓库信息
+	private async handleGetCurrentRepo(): Promise<void> {
+		try {
+			const repoInfo = await this.gitUtils.getRepositoryInfo()
+			
+			// 如果有GitLab项目路径，尝试获取项目详情
+			if (repoInfo.gitlabProjectPath) {
+				try {
+					const project = await this.gitLabService.getProjectByPath(repoInfo.gitlabProjectPath)
+					if (project) {
+						repoInfo.gitlabProjectPath = project.path_with_namespace
+						// 可以添加更多项目信息
+					}
+				} catch (error) {
+					// 忽略获取项目详情的错误
+					console.warn('获取GitLab项目详情失败:', error)
+				}
+			}
+
+			this.sendResponse('gitlab:getCurrentRepo', true, repoInfo)
+		} catch (error: any) {
+			this.sendResponse('gitlab:getCurrentRepo', false, null, error.message)
+		}
+	}
+
+	// 处理设置配置
+	private async handleSetConfiguration(config: any): Promise<void> {
+		try {
+			await this.gitLabService.setConfiguration(config)
+			const testResult = await this.gitLabService.testConnection()
+			this.sendResponse('gitlab:setConfiguration', testResult.success, testResult, testResult.success ? undefined : testResult.message)
+		} catch (error: any) {
+			this.sendResponse('gitlab:setConfiguration', false, null, error.message)
+		}
+	}
+
+	// 初始化配置
+	private async initializeConfig(): Promise<void> {
+		try {
+			const config = await this.configManager.loadConfig()
+			
+			// 设置GitLab服务配置
+			if (config.gitlab.baseUrl && config.gitlab.token) {
+				await this.gitLabService.setConfiguration(config.gitlab)
+			}
+
+			// 设置配置文件监听
+			this.configWatcher = this.configManager.watchConfigFile(async (newConfig) => {
+				// 更新GitLab服务配置
+				if (newConfig.gitlab.baseUrl && newConfig.gitlab.token) {
+					await this.gitLabService.setConfiguration(newConfig.gitlab)
+				}
+				
+				// 通知webview配置已更新
+				this.sendConfigStatus()
+			})
+		} catch (error) {
+			console.error('初始化配置失败:', error)
+		}
+	}
+
+	// 处理打开配置文件
+	private async handleOpenConfig(): Promise<void> {
+		try {
+			await this.configManager.openConfigFile()
+		} catch (error: any) {
+			console.error('打开配置文件失败:', error)
+			vscode.window.showErrorMessage(`打开配置文件失败: ${error.message}`)
+		}
+	}
+
+	// 处理重新加载配置
+	private async handleReloadConfig(): Promise<void> {
+		try {
+			const config = await this.configManager.loadConfig()
+			
+			// 更新GitLab服务配置
+			if (config.gitlab.baseUrl && config.gitlab.token) {
+				await this.gitLabService.setConfiguration(config.gitlab)
+			}
+
+			// 发送配置状态
+			this.sendConfigStatus()
+		} catch (error: any) {
+			console.error('重新加载配置失败:', error)
+			this.sendConfigStatus()
+		}
+	}
+
+	// 发送配置状态到webview
+	private async sendConfigStatus(): Promise<void> {
+		try {
+			console.log('开始检查配置状态...')
+			const isConfigured = await this.configManager.isConfigured()
+			let configError = ''
+
+			if (!isConfigured) {
+				const config = await this.configManager.loadConfig()
+				const validation = this.configManager.validateConfig(config)
+				configError = validation.errors.join('; ')
+				console.log('配置验证失败:', validation.errors)
+			} else {
+				console.log('配置检查通过')
+			}
+
+			const statusMessage = {
+				type: 'config:status',
+				configured: isConfigured,
+				error: configError
+			}
+
+			console.log('发送配置状态到webview:', statusMessage)
+			this.view?.webview.postMessage(statusMessage)
+		} catch (error: any) {
+			console.error('发送配置状态失败:', error)
+			const errorMessage = {
+				type: 'config:status',
+				configured: false,
+				error: error.message || '检查配置时发生错误'
+			}
+			console.log('发送错误状态到webview:', errorMessage)
+			this.view?.webview.postMessage(errorMessage)
+		}
+	}
+
+	// 发送配置信息到webview
+	private async sendConfigInfo(): Promise<void> {
+		try {
+			const config = await this.configManager.loadConfig()
+			const isConfigured = await this.configManager.isConfigured()
+			
+			// 测试连接状态
+			let isConnected = false
+			if (isConfigured) {
+				try {
+					const testResult = await this.gitLabService.testConnection()
+					isConnected = testResult.success
+				} catch (error) {
+					isConnected = false
+				}
+			}
+
+			this.view?.webview.postMessage({
+				type: 'config:info',
+				baseUrl: config.gitlab.baseUrl,
+				isConnected,
+				isConfigured
+			})
+		} catch (error: any) {
+			console.error('发送配置信息失败:', error)
+			this.view?.webview.postMessage({
+				type: 'config:info',
+				baseUrl: '',
+				isConnected: false,
+				isConfigured: false
+			})
+		}
 	}
 }
 

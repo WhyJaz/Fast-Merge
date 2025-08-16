@@ -1,0 +1,223 @@
+import React, { useEffect, useState, useMemo } from 'react';
+import { Select, Spin, Empty, Typography, Tag, Tooltip } from 'antd';
+import { BranchesOutlined, UserOutlined, CalendarOutlined } from '@ant-design/icons';
+import { GitLabCommit } from '../types/gitlab';
+import { useGitLabApi } from '../hooks/useGitLabApi';
+
+const { Option } = Select;
+const { Text } = Typography;
+
+interface CommitSelectorProps {
+  projectId?: number;
+  branch?: string;
+  value?: string | string[];
+  onChange?: (commit: string | string[] | undefined) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  multiple?: boolean;
+  maxTagCount?: number;
+}
+
+export const CommitSelector: React.FC<CommitSelectorProps> = ({
+  projectId,
+  branch,
+  value,
+  onChange,
+  placeholder = "选择提交",
+  disabled = false,
+  multiple = false,
+  maxTagCount = 2
+}) => {
+  const { getCommits, commitsState } = useGitLabApi();
+  const [searchText, setSearchText] = useState('');
+  const [page, setPage] = useState(1);
+  const [allCommits, setAllCommits] = useState<GitLabCommit[]>([]);
+
+  // 当项目ID或分支变化时获取提交
+  useEffect(() => {
+    if (projectId && branch) {
+      setPage(1);
+      setAllCommits([]);
+      getCommits(projectId, branch, '', 1, 20);
+    }
+  }, [projectId, branch, getCommits]);
+
+  // 处理提交数据更新
+  useEffect(() => {
+    if (commitsState.data && !commitsState.loading) {
+      if (page === 1) {
+        setAllCommits(commitsState.data);
+      } else {
+        setAllCommits(prev => [...prev, ...(commitsState.data || [])]);
+      }
+    }
+  }, [commitsState.data, commitsState.loading, page]);
+
+  // 搜索处理
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    setPage(1);
+    setAllCommits([]);
+    if (projectId && branch) {
+      getCommits(projectId, branch, value, 1, 20);
+    }
+  };
+
+  // 加载更多
+  const handleLoadMore = () => {
+    if (projectId && branch) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      getCommits(projectId, branch, searchText, nextPage, 20);
+    }
+  };
+
+  // 选择提交
+  const handleSelect = (commitId: string | string[]) => {
+    onChange?.(commitId);
+  };
+
+  // 过滤提交
+  const filteredCommits = useMemo(() => {
+    if (!allCommits || allCommits.length === 0) return [];
+    if (!searchText) return allCommits;
+    return allCommits.filter(commit => 
+      commit.title.toLowerCase().includes(searchText.toLowerCase()) ||
+      commit.message.toLowerCase().includes(searchText.toLowerCase()) ||
+      commit.id.toLowerCase().includes(searchText.toLowerCase()) ||
+      commit.short_id.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [allCommits, searchText]);
+
+  // 格式化日期
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return '今天';
+    if (diffDays === 1) return '昨天';
+    if (diffDays < 7) return `${diffDays}天前`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
+    return date.toLocaleDateString();
+  };
+
+  const renderCommitOption = (commit: GitLabCommit) => (
+    <Option key={commit.id} value={commit.id}>
+      <div style={{ padding: '4px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <BranchesOutlined style={{ color: '#722ed1', marginTop: 2 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ 
+              fontWeight: 500,
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              marginBottom: 2
+            }}>
+              {commit.title}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+              <Tag color="purple" style={{ margin: 0, fontSize: '11px' }}>
+                {commit.short_id}
+              </Tag>
+              <Text type="secondary" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <UserOutlined />
+                {commit.author_name}
+              </Text>
+              <Text type="secondary" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CalendarOutlined />
+                {formatDate(commit.authored_date)}
+              </Text>
+            </div>
+            {commit.message !== commit.title && (
+              <Tooltip title={commit.message}>
+                <Text 
+                  type="secondary" 
+                  style={{ 
+                    fontSize: '12px',
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    display: 'block',
+                    opacity: 0.7
+                  }}
+                >
+                  {commit.message}
+                </Text>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+      </div>
+    </Option>
+  );
+
+  const dropdownRender = (menu: React.ReactElement) => (
+    <div>
+      {menu}
+      {filteredCommits.length > 0 && !commitsState.loading && (
+        <div style={{ padding: 8, borderTop: '1px solid #f0f0f0' }}>
+          <a 
+            onClick={handleLoadMore}
+            style={{ 
+              display: 'block', 
+              textAlign: 'center',
+              color: '#1890ff',
+              cursor: 'pointer'
+            }}
+          >
+            加载更多提交...
+          </a>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <Select
+      mode={multiple ? 'multiple' : undefined}
+      showSearch
+      value={value}
+      placeholder={placeholder}
+      disabled={disabled || !projectId || !branch}
+      loading={commitsState.loading}
+      onSearch={handleSearch}
+      onSelect={handleSelect}
+      onChange={handleSelect}
+      filterOption={false}
+      style={{ width: '100%' }}
+      maxTagCount={maxTagCount}
+      dropdownRender={dropdownRender}
+      notFoundContent={
+        commitsState.loading ? (
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <Spin size="small" />
+            <div style={{ marginTop: 8 }}>加载提交中...</div>
+          </div>
+        ) : !projectId ? (
+          <Empty 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+            description="请先选择项目" 
+            style={{ padding: 20 }}
+          />
+        ) : !branch ? (
+          <Empty 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+            description="请先选择分支" 
+            style={{ padding: 20 }}
+          />
+        ) : (
+          <Empty 
+            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+            description="未找到提交" 
+            style={{ padding: 20 }}
+          />
+        )
+      }
+    >
+      {filteredCommits.map(renderCommitOption)}
+    </Select>
+  );
+};
