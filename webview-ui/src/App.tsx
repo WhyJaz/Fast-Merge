@@ -96,6 +96,7 @@ const App: React.FC = () => {
     );
   }
 
+  console.log(isConfigured, 'isConfigured')
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <Content>

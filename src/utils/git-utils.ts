@@ -13,13 +13,7 @@ export interface GitRepository {
   gitlabBaseUrl?: string;
 }
 
-export interface GitCommitInfo {
-  hash: string;
-  shortHash: string;
-  message: string;
-  author: string;
-  date: string;
-}
+
 
 export class GitUtils {
   private workspaceFolder: string;
@@ -98,33 +92,7 @@ export class GitUtils {
     }
   }
 
-  /**
-   * 获取最近的提交信息
-   */
-  async getRecentCommits(count: number = 20): Promise<GitCommitInfo[]> {
-    try {
-      const cmd = `git log --pretty=format:"%H|%h|%s|%an|%ad" --date=iso -${count}`;
-      const { stdout } = await execAsync(cmd, { cwd: this.workspaceFolder });
-      
-      if (!stdout.trim()) {
-        return [];
-      }
 
-      return stdout.trim().split('\n').map(line => {
-        const [hash, shortHash, message, author, date] = line.split('|');
-        return {
-          hash: hash.trim(),
-          shortHash: shortHash.trim(),
-          message: message.trim(),
-          author: author.trim(),
-          date: date.trim()
-        };
-      });
-    } catch (error) {
-      console.error('获取提交历史失败:', error);
-      return [];
-    }
-  }
 
   /**
    * 获取当前仓库完整信息
@@ -155,97 +123,5 @@ export class GitUtils {
     };
   }
 
-  /**
-   * 获取所有本地分支
-   */
-  async getLocalBranches(): Promise<string[]> {
-    try {
-      const { stdout } = await execAsync('git branch --format="%(refname:short)"', { cwd: this.workspaceFolder });
-      return stdout.trim().split('\n').filter(branch => branch.length > 0);
-    } catch (error) {
-      console.error('获取本地分支失败:', error);
-      return [];
-    }
-  }
 
-  /**
-   * 获取所有远程分支
-   */
-  async getRemoteBranches(): Promise<string[]> {
-    try {
-      const { stdout } = await execAsync('git branch -r --format="%(refname:short)"', { cwd: this.workspaceFolder });
-      return stdout.trim().split('\n')
-        .filter(branch => branch.length > 0 && !branch.includes('HEAD'))
-        .map(branch => branch.replace('origin/', ''));
-    } catch (error) {
-      console.error('获取远程分支失败:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 根据关键词搜索提交
-   */
-  async searchCommits(keyword: string, count: number = 50): Promise<GitCommitInfo[]> {
-    try {
-      // 同时搜索提交消息和提交哈希
-      const msgCmd = `git log --pretty=format:"%H|%h|%s|%an|%ad" --date=iso --grep="${keyword}" -${count}`;
-      const hashCmd = `git log --pretty=format:"%H|%h|%s|%an|%ad" --date=iso --grep="${keyword}" -${count}`;
-      
-      let commits: GitCommitInfo[] = [];
-      
-      // 搜索提交消息
-      try {
-        const { stdout: msgStdout } = await execAsync(msgCmd, { cwd: this.workspaceFolder });
-        if (msgStdout.trim()) {
-          const msgCommits = msgStdout.trim().split('\n').map(line => {
-            const [hash, shortHash, message, author, date] = line.split('|');
-            return {
-              hash: hash.trim(),
-              shortHash: shortHash.trim(),
-              message: message.trim(),
-              author: author.trim(),
-              date: date.trim()
-            };
-          });
-          commits.push(...msgCommits);
-        }
-      } catch (e) {
-        // 忽略搜索错误，继续下一种搜索
-      }
-
-      // 如果关键词看起来像哈希，也搜索哈希
-      if (/^[a-f0-9]+$/i.test(keyword)) {
-        try {
-          const hashSearchCmd = `git log --pretty=format:"%H|%h|%s|%an|%ad" --date=iso --all --grep="${keyword}" -${count}`;
-          const { stdout: hashStdout } = await execAsync(hashSearchCmd, { cwd: this.workspaceFolder });
-          if (hashStdout.trim()) {
-            const hashCommits = hashStdout.trim().split('\n').map(line => {
-              const [hash, shortHash, message, author, date] = line.split('|');
-              return {
-                hash: hash.trim(),
-                shortHash: shortHash.trim(),
-                message: message.trim(),
-                author: author.trim(),
-                date: date.trim()
-              };
-            });
-            commits.push(...hashCommits);
-          }
-        } catch (e) {
-          // 忽略搜索错误
-        }
-      }
-
-      // 去重，以hash为标准
-      const uniqueCommits = commits.filter((commit, index, self) => 
-        index === self.findIndex(c => c.hash === commit.hash)
-      );
-
-      return uniqueCommits;
-    } catch (error) {
-      console.error('搜索提交失败:', error);
-      return [];
-    }
-  }
 }

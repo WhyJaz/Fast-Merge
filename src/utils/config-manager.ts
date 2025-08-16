@@ -9,10 +9,6 @@ export interface FastMergeConfig {
     removeSourceBranch: boolean;
     squash: boolean;
   };
-  ui: {
-    theme: 'auto' | 'light' | 'dark';
-    language: 'zh-CN' | 'en-US';
-  };
 }
 
 export const DEFAULT_CONFIG: FastMergeConfig = {
@@ -24,10 +20,6 @@ export const DEFAULT_CONFIG: FastMergeConfig = {
   merge: {
     removeSourceBranch: false,
     squash: false
-  },
-  ui: {
-    theme: 'auto',
-    language: 'zh-CN'
   }
 };
 
@@ -117,50 +109,10 @@ export class ConfigManager {
         viewColumn: vscode.ViewColumn.One
       });
 
-      // 显示配置说明
-      vscode.window.showInformationMessage(
-        '请在配置文件中填写您的 GitLab 信息，保存后插件会自动重新加载配置。',
-        '查看配置说明'
-      ).then(selection => {
-        if (selection === '查看配置说明') {
-          this.showConfigHelp();
-        }
-      });
-
     } catch (error) {
       console.error('打开配置文件失败:', error);
       vscode.window.showErrorMessage(`打开配置文件失败: ${error}`);
     }
-  }
-
-  /**
-   * 显示配置帮助信息
-   */
-  private showConfigHelp(): void {
-    const helpMessage = `
-# Fast Merge 配置说明
-
-## GitLab 配置
-- baseUrl: GitLab 服务器地址（如 https://gitlab.com）
-- token: Personal Access Token（需要 api 权限）
-- projectId: 默认项目ID（可选）
-
-## 合并配置
-- removeSourceBranch: 合并后是否删除源分支
-- squash: 是否启用 Squash 合并
-
-## UI 配置
-- theme: 主题（auto/light/dark）
-- language: 语言（zh-CN/en-US）
-
-## 获取 Access Token
-1. 前往 GitLab → Settings → Access Tokens
-2. 创建新的 Personal Access Token
-3. 确保勾选 'api' 权限
-4. 复制生成的 token 到配置文件中
-    `;
-
-    vscode.window.showInformationMessage(helpMessage);
   }
 
   /**
@@ -175,10 +127,6 @@ export class ConfigManager {
       merge: {
         ...DEFAULT_CONFIG.merge,
         ...config.merge
-      },
-      ui: {
-        ...DEFAULT_CONFIG.ui,
-        ...config.ui
       }
     };
   }

@@ -45,7 +45,7 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
             <div>
               <div>{configError}</div>
               {configError.includes('超时') && (
-                <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>
+                <div style={{ fontSize: '12px', opacity: 0.8 }}>
                   可能原因：扩展未完全加载或配置文件权限问题
                 </div>
               )}
@@ -66,7 +66,7 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
         <Steps 
           direction="vertical" 
           size="small"
-          current={4}
+          current={3}
           items={[
             {
               title: <div> 1. 点击下方按钮打开配置文件，编辑完成后请保存文件 <Button 
@@ -83,14 +83,14 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
               title: '2. 在配置文件中填写您的 GitLab 服务器地址和访问令牌',
             },
             {
-              title: '3. 保存配置文件，插件会自动检测配置变化',
-            },
-            {
-              title: '4. 保存配置文件后，请点击"重新检查"按钮刷新页面',
+              title: <div>3. 保存配置文件后，请点击<Button size="small" onClick={handleReloadConfig} icon={<ReloadOutlined />}>
+              重新检查
+            </Button>按钮刷新页面</div>,
             }
           ]}
         />
       </Card>
+      <div style={{ height: 24 }}></div>
 
       <Card title="配置说明" style={{ marginBottom: 24 }}>
         <Paragraph>
@@ -126,16 +126,11 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
   {`{
     "gitlab": {
       "baseUrl": "https://gitlab.com",
-      "token": "glpat-xxxxxxxxxxxxxxxxxxxx",
-      "projectId": null
+      "token": "glpat-xxxxxxxxxxxxxxxxxxxx"
     },
     "merge": {
       "removeSourceBranch": false,
       "squash": false
-    },
-    "ui": {
-      "theme": "auto",
-      "language": "zh-CN"
     }
   }`}
             </pre>

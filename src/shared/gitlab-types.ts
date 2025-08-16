@@ -146,6 +146,35 @@ export interface GitLabApiResponse<T> {
   status: number;
 }
 
+export interface GitLabUser {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  avatar_url: string;
+  state: string;
+  web_url: string;
+}
+
+export interface GitRepository {
+  workspaceFolder: string;
+  remoteUrl: string;
+  currentBranch: string;
+  isGitRepository: boolean;
+  gitlabProjectPath?: string;
+  gitlabBaseUrl?: string;
+}
+
+export interface ResponseMessage {
+  type: 'response';
+  message: {
+    requestType: string;
+    success: boolean;
+    data?: any;
+    error?: string;
+  };
+}
+
 export interface GitLabApiError {
   message: string;
   error_description?: string;

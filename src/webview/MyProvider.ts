@@ -17,9 +17,9 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private configWatcher?: vscode.Disposable
 
 	constructor(readonly context: vscode.ExtensionContext) {
-		this.gitLabService = new GitLabService()
-		this.gitUtils = new GitUtils()
 		this.configManager = new ConfigManager(context)
+		this.gitLabService = new GitLabService() // 将在initializeConfig中设置配置
+		this.gitUtils = new GitUtils()
 		this.initializeConfig()
 	}
 
@@ -329,9 +329,17 @@ class MyProvider implements vscode.WebviewViewProvider {
 	}
 
 	// 处理设置配置
-	private async handleSetConfiguration(config: any): Promise<void> {
+	private async handleSetConfiguration(gitlabConfig: any): Promise<void> {
 		try {
-			await this.gitLabService.setConfiguration(config)
+			// 加载当前完整配置
+			const currentConfig = await this.configManager.loadConfig()
+			// 更新GitLab部分
+			currentConfig.gitlab = gitlabConfig
+			// 保存配置到文件
+			await this.configManager.saveConfig(currentConfig)
+			// 更新服务配置
+			this.gitLabService.updateConfig(currentConfig)
+			
 			const testResult = await this.gitLabService.testConnection()
 			this.sendResponse('gitlab:setConfiguration', testResult.success, testResult, testResult.success ? undefined : testResult.message)
 		} catch (error: any) {
@@ -344,17 +352,13 @@ class MyProvider implements vscode.WebviewViewProvider {
 		try {
 			const config = await this.configManager.loadConfig()
 			
-			// 设置GitLab服务配置
-			if (config.gitlab.baseUrl && config.gitlab.token) {
-				await this.gitLabService.setConfiguration(config.gitlab)
-			}
+			// 更新GitLab服务配置，使用完整的配置对象
+			this.gitLabService.updateConfig(config)
 
 			// 设置配置文件监听
 			this.configWatcher = this.configManager.watchConfigFile(async (newConfig) => {
 				// 更新GitLab服务配置
-				if (newConfig.gitlab.baseUrl && newConfig.gitlab.token) {
-					await this.gitLabService.setConfiguration(newConfig.gitlab)
-				}
+				this.gitLabService.updateConfig(newConfig)
 				
 				// 通知webview配置已更新
 				this.sendConfigStatus()
@@ -380,9 +384,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 			const config = await this.configManager.loadConfig()
 			
 			// 更新GitLab服务配置
-			if (config.gitlab.baseUrl && config.gitlab.token) {
-				await this.gitLabService.setConfiguration(config.gitlab)
-			}
+			this.gitLabService.updateConfig(config)
 
 			// 发送配置状态
 			this.sendConfigStatus()

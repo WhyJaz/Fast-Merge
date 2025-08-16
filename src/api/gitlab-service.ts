@@ -1,7 +1,5 @@
-import * as vscode from 'vscode';
-import https from 'https';
-import http from 'http';
-import { URL } from 'url';
+import { FastMergeConfig } from '../utils/config-manager';
+import { HttpClient } from './http-client';
 import {
   GitLabProject,
   GitLabBranch,
@@ -12,145 +10,64 @@ import {
   CherryPickOptions,
   MergeResult,
   CherryPickResult,
-  GitLabApiError
+  GitLabUser
 } from '../shared/gitlab-types';
 
 export class GitLabService {
-  private config: GitLabConfiguration | null = null;
+  private httpClient: HttpClient;
+  private config: FastMergeConfig | null = null;
 
-  constructor() {
-    this.loadConfiguration();
+  constructor(initialConfig?: FastMergeConfig) {
+    this.httpClient = new HttpClient(initialConfig);
+    this.config = initialConfig || null;
   }
 
   /**
-   * 加载GitLab配置
+   * 更新配置
    */
-  private async loadConfiguration(): Promise<void> {
-    const config = vscode.workspace.getConfiguration('fast-merge');
-    const baseUrl = config.get<string>('gitlab.baseUrl') || '';
-    const token = config.get<string>('gitlab.token') || '';
-    
-    if (baseUrl && token) {
-      this.config = { baseUrl, token };
-    }
-  }
-
-  /**
-   * 设置GitLab配置
-   */
-  async setConfiguration(config: GitLabConfiguration): Promise<void> {
+  updateConfig(config: FastMergeConfig): void {
     this.config = config;
-    
-    // 保存到VSCode配置中
-    const vsConfig = vscode.workspace.getConfiguration('fast-merge');
-    await vsConfig.update('gitlab.baseUrl', config.baseUrl, vscode.ConfigurationTarget.Global);
-    await vsConfig.update('gitlab.token', config.token, vscode.ConfigurationTarget.Global);
-    if (config.projectId) {
-      await vsConfig.update('gitlab.projectId', config.projectId, vscode.ConfigurationTarget.Global);
-    }
+    this.httpClient.updateConfig(config);
   }
 
   /**
-   * 检查配置是否有效
+   * 设置GitLab配置（为了向后兼容）
    */
-  private ensureConfiguration(): void {
-    if (!this.config || !this.config.baseUrl || !this.config.token) {
-      throw new Error('GitLab 配置无效，请先设置 GitLab 服务器地址和访问令牌');
-    }
-  }
-
-  /**
-   * 发送HTTP请求
-   */
-  private async makeRequest<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-    endpoint: string,
-    data?: any
-  ): Promise<T> {
-    this.ensureConfiguration();
-
-    return new Promise((resolve, reject) => {
-      const url = new URL(`${this.config!.baseUrl}/api/v4${endpoint}`);
-      const isHttps = url.protocol === 'https:';
-      const httpModule = isHttps ? https : http;
-
-      const postData = data ? JSON.stringify(data) : undefined;
-
-      const options = {
-        hostname: url.hostname,
-        port: url.port || (isHttps ? 443 : 80),
-        path: url.pathname + url.search,
-        method,
-        headers: {
-          'Authorization': `Bearer ${this.config!.token}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'VSCode-FastMerge-Extension',
-          ...(postData && { 'Content-Length': Buffer.byteLength(postData) })
+  async setConfiguration(gitlabConfig: GitLabConfiguration): Promise<void> {
+    if (!this.config) {
+      // 如果没有完整配置，创建一个默认配置
+      const defaultConfig: FastMergeConfig = {
+        gitlab: gitlabConfig,
+        merge: {
+          removeSourceBranch: false,
+          squash: false
         }
       };
-
-      const req = httpModule.request(options, (res) => {
-        let responseData = '';
-
-        res.on('data', (chunk) => {
-          responseData += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-              const result = responseData ? JSON.parse(responseData) : {};
-              resolve(result);
-            } else {
-              const error: GitLabApiError = {
-                message: `HTTP ${res.statusCode}: ${res.statusMessage}`,
-                status: res.statusCode
-              };
-              
-              try {
-                const errorData = JSON.parse(responseData);
-                error.message = errorData.message || errorData.error_description || error.message;
-                error.error = errorData.error;
-              } catch (e) {
-                // 使用默认错误消息
-              }
-              
-              reject(error);
-            }
-          } catch (e) {
-            reject(new Error(`解析响应失败: ${e}`));
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        reject(new Error(`请求失败: ${error.message}`));
-      });
-
-      if (postData) {
-        req.write(postData);
-      }
-
-      req.end();
-    });
+      this.updateConfig(defaultConfig);
+    } else {
+      // 更新现有配置的GitLab部分
+      this.config.gitlab = gitlabConfig;
+      this.httpClient.updateConfig(this.config);
+    }
   }
 
   /**
    * 获取项目列表
    */
   async getProjects(search?: string, page: number = 1, perPage: number = 20): Promise<GitLabProject[]> {
-    const params = new URLSearchParams({
+    const params: Record<string, string | number> = {
       page: page.toString(),
       per_page: perPage.toString(),
       membership: 'true',
       simple: 'true'
-    });
+    };
 
     if (search) {
-      params.append('search', search);
+      params.search = search;
     }
 
-    return this.makeRequest<GitLabProject[]>('GET', `/projects?${params}`);
+    const response = await this.httpClient.get<GitLabProject[]>('/projects', params);
+    return response.data;
   }
 
   /**
@@ -159,7 +76,8 @@ export class GitLabService {
   async getProjectByPath(projectPath: string): Promise<GitLabProject | null> {
     try {
       const encodedPath = encodeURIComponent(projectPath);
-      return await this.makeRequest<GitLabProject>('GET', `/projects/${encodedPath}`);
+      const response = await this.httpClient.get<GitLabProject>(`/projects/${encodedPath}`);
+      return response.data;
     } catch (error) {
       console.error('获取项目失败:', error);
       return null;
@@ -170,15 +88,19 @@ export class GitLabService {
    * 获取项目分支列表
    */
   async getBranches(projectId: number, search?: string): Promise<GitLabBranch[]> {
-    const params = new URLSearchParams({
+    const params: Record<string, string | number> = {
       per_page: '100'
-    });
+    };
 
     if (search) {
-      params.append('search', search);
+      params.search = search;
     }
 
-    return this.makeRequest<GitLabBranch[]>('GET', `/projects/${projectId}/repository/branches?${params}`);
+    const response = await this.httpClient.get<GitLabBranch[]>(
+      `/projects/${projectId}/repository/branches`,
+      params
+    );
+    return response.data;
   }
 
   /**
@@ -191,18 +113,21 @@ export class GitLabService {
     page: number = 1,
     perPage: number = 20
   ): Promise<GitLabCommit[]> {
-    const params = new URLSearchParams({
+    const params: Record<string, string | number> = {
       ref_name: branch,
       page: page.toString(),
       per_page: perPage.toString()
-    });
+    };
 
     if (search) {
-      // GitLab API支持按提交消息搜索
-      params.append('search', search);
+      params.search = search;
     }
 
-    return this.makeRequest<GitLabCommit[]>('GET', `/projects/${projectId}/repository/commits?${params}`);
+    const response = await this.httpClient.get<GitLabCommit[]>(
+      `/projects/${projectId}/repository/commits`,
+      params
+    );
+    return response.data;
   }
 
   /**
@@ -210,12 +135,15 @@ export class GitLabService {
    */
   async createMergeRequest(projectId: number, options: MergeRequestOptions): Promise<MergeResult> {
     try {
-      const mergeRequest = await this.makeRequest<GitLabMergeRequest>('POST', `/projects/${projectId}/merge_requests`, options);
+      const response = await this.httpClient.post<GitLabMergeRequest>(
+        `/projects/${projectId}/merge_requests`,
+        options
+      );
       
       return {
         success: true,
-        merge_request: mergeRequest,
-        message: `合并请求已创建: ${mergeRequest.title}`
+        merge_request: response.data,
+        message: `合并请求已创建: ${response.data.title}`
       };
     } catch (error: any) {
       return {
@@ -272,8 +200,9 @@ export class GitLabService {
   /**
    * 获取当前用户信息
    */
-  async getCurrentUser() {
-    return this.makeRequest('GET', '/user');
+  async getCurrentUser(): Promise<GitLabUser> {
+    const response = await this.httpClient.get<GitLabUser>('/user');
+    return response.data;
   }
 
   /**
@@ -310,11 +239,13 @@ export class GitLabService {
     // 如果关键词看起来像commit ID，也尝试精确搜索
     if (/^[a-f0-9]+$/i.test(keyword) && keyword.length >= 7) {
       try {
-        const commit = await this.makeRequest<GitLabCommit>('GET', `/projects/${projectId}/repository/commits/${keyword}`);
+        const response = await this.httpClient.get<GitLabCommit>(
+          `/projects/${projectId}/repository/commits/${keyword}`
+        );
         // 检查是否已存在，避免重复
-        const exists = commits.some(c => c.id === commit.id);
+        const exists = commits.some(c => c.id === response.data.id);
         if (!exists) {
-          commits = [commit, ...commits];
+          commits = [response.data, ...commits];
         }
       } catch (error) {
         // 如果精确搜索失败，忽略错误，只返回消息搜索结果
@@ -322,5 +253,68 @@ export class GitLabService {
     }
 
     return commits;
+  }
+
+  /**
+   * 获取合并请求列表
+   */
+  async getMergeRequests(
+    projectId: number,
+    state: 'opened' | 'closed' | 'merged' | 'all' = 'opened',
+    page: number = 1,
+    perPage: number = 20
+  ): Promise<GitLabMergeRequest[]> {
+    const params: Record<string, string | number> = {
+      state,
+      page: page.toString(),
+      per_page: perPage.toString()
+    };
+
+    const response = await this.httpClient.get<GitLabMergeRequest[]>(
+      `/projects/${projectId}/merge_requests`,
+      params
+    );
+    return response.data;
+  }
+
+  /**
+   * 获取单个合并请求详情
+   */
+  async getMergeRequest(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
+    const response = await this.httpClient.get<GitLabMergeRequest>(
+      `/projects/${projectId}/merge_requests/${mergeRequestIid}`
+    );
+    return response.data;
+  }
+
+  /**
+   * 接受合并请求
+   */
+  async acceptMergeRequest(
+    projectId: number,
+    mergeRequestIid: number,
+    options?: {
+      merge_commit_message?: string;
+      squash_commit_message?: string;
+      should_remove_source_branch?: boolean;
+      squash?: boolean;
+    }
+  ): Promise<GitLabMergeRequest> {
+    const response = await this.httpClient.put<GitLabMergeRequest>(
+      `/projects/${projectId}/merge_requests/${mergeRequestIid}/merge`,
+      options
+    );
+    return response.data;
+  }
+
+  /**
+   * 关闭合并请求
+   */
+  async closeMergeRequest(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
+    const response = await this.httpClient.put<GitLabMergeRequest>(
+      `/projects/${projectId}/merge_requests/${mergeRequestIid}`,
+      { state_event: 'close' }
+    );
+    return response.data;
   }
 }
