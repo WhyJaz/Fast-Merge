@@ -85,6 +85,36 @@ body {
   background: var(--vscode-input-background, #ffffff) !important;
 }
 
+/* Placeholder 文字颜色 */
+.ant-input::placeholder,
+.ant-select-selector .ant-select-selection-placeholder {
+  color: var(--vscode-input-placeholderForeground, #999999) !important;
+  opacity: 1 !important;
+}
+
+.ant-select-selection-placeholder {
+  color: var(--vscode-input-placeholderForeground, #999999) !important;
+}
+
+/* 多选模式下的样式 */
+.ant-select-multiple .ant-select-selection-placeholder {
+  color: var(--vscode-input-placeholderForeground, #999999) !important;
+}
+
+.ant-select-multiple .ant-select-selection-item {
+  background: var(--vscode-badge-background, #007acc) !important;
+  color: var(--vscode-badge-foreground, #ffffff) !important;
+  border-color: var(--vscode-badge-background, #007acc) !important;
+}
+
+.ant-select-multiple .ant-select-selection-item-remove {
+  color: var(--vscode-badge-foreground, #ffffff) !important;
+}
+
+.ant-select-multiple .ant-select-selection-item-remove:hover {
+  color: var(--vscode-errorForeground, #ff6b6b) !important;
+}
+
 /* 按钮样式 */
 .ant-btn {
   border-radius: 4px !important;
@@ -124,6 +154,38 @@ body {
 .ant-select-item-option-selected {
   background: var(--vscode-list-activeSelectionBackground, #0e639c) !important;
   color: var(--vscode-list-activeSelectionForeground, #ffffff) !important;
+}
+
+/* Radio 样式 */
+.ant-radio-wrapper {
+  color: var(--vscode-editor-foreground, #000000) !important;
+}
+
+.ant-radio-wrapper:hover {
+  color: var(--vscode-editor-foreground, #000000) !important;
+}
+
+.ant-radio-wrapper span:last-child {
+  color: var(--vscode-editor-foreground, #000000) !important;
+}
+
+.ant-radio-inner {
+  background-color: var(--vscode-input-background, #ffffff) !important;
+  border-color: var(--vscode-input-border, #d9d9d9) !important;
+}
+
+.ant-radio:hover .ant-radio-inner,
+.ant-radio-input:focus + .ant-radio-inner {
+  border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+.ant-radio-checked .ant-radio-inner {
+  background-color: var(--vscode-input-background, #ffffff) !important;
+  border-color: var(--vscode-focusBorder, #007acc) !important;
+}
+
+.ant-radio-checked .ant-radio-inner::after {
+  background-color: var(--vscode-focusBorder, #007acc) !important;
 }
 
 /* 标签样式 */
@@ -208,5 +270,23 @@ body {
   body {
     background-color: var(--vscode-editor-background, #1e1e1e);
     color: var(--vscode-editor-foreground, #d4d4d4);
+  }
+  
+  /* 确保暗色主题下的文字可见性 */
+  .ant-radio-wrapper,
+  .ant-radio-wrapper:hover,
+  .ant-radio-wrapper span:last-child {
+    color: var(--vscode-editor-foreground, #d4d4d4) !important;
+  }
+  
+  .ant-input::placeholder,
+  .ant-select-selector .ant-select-selection-placeholder,
+  .ant-select-selection-placeholder,
+  .ant-select-multiple .ant-select-selection-placeholder {
+    color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+  }
+  
+  .ant-form-item-label > label {
+    color: var(--vscode-editor-foreground, #d4d4d4) !important;
   }
 }
