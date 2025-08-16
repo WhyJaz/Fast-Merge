@@ -163,7 +163,15 @@ export class GitLabService {
     for (const targetBranch of options.target_branches) {
       try {
         // 为每个目标分支创建一个合并请求
-        const title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;
+        // 使用commit的消息作为标题
+        let title = '';
+        if (options.commit_details && options.commit_details.length > 0) {
+          // 使用commit的title作为标题
+          title = `${options.title_prefix || 'Cherry-pick'}: ${options.commit_details[0].title}`;
+        } else {
+          // 回退到原来的逻辑
+          title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;
+        }
         
         const mergeRequestOptions: MergeRequestOptions = {
           title,

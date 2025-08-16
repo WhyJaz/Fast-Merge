@@ -123,6 +123,7 @@ export interface CherryPickOptions {
   target_branches: string[];
   title_prefix?: string;
   description?: string;
+  commit_details?: GitLabCommit[]; // 添加commit详细信息
 }
 
 export interface MergeResult {

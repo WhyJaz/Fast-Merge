@@ -25,7 +25,7 @@ import { CommitSelector } from '../components/CommitSelector';
 import { MergeStatus } from '../components/MergeStatus';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 import { useConfig } from '../hooks/useConfig';
-import { GitLabProject, MergeRequestOptions, CherryPickOptions } from '../types/gitlab';
+import { GitLabProject, GitLabCommit, MergeRequestOptions, CherryPickOptions } from '../types/gitlab';
 
 const { Text, Title } = Typography;
 
@@ -50,7 +50,8 @@ export const MergePage: React.FC = () => {
   const [mergeType, setMergeType] = useState<MergeType>('branch');
   const [sourceBranch, setSourceBranch] = useState<string>();
   const [targetBranch, setTargetBranch] = useState<string>();
-  const [selectedCommits, setSelectedCommits] = useState<string[]>([]);
+  const [selectedCommit, setSelectedCommit] = useState<string | undefined>(undefined);
+  const [selectedCommitDetail, setSelectedCommitDetail] = useState<GitLabCommit | null>(null); // 存储完整的commit信息
   const [targetBranches, setTargetBranches] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -92,7 +93,8 @@ export const MergePage: React.FC = () => {
       // 项目变化时重置所有分支和提交选择
       setSourceBranch(undefined); // 修复：添加清空源分支选择
       setTargetBranch(undefined);
-      setSelectedCommits([]);
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
       setTargetBranches([]);
     }
   }, [selectedProject]);
@@ -101,7 +103,8 @@ export const MergePage: React.FC = () => {
   useEffect(() => {
     if (selectedProject && sourceBranch && mergeType === 'cherry-pick') {
       // 修复：先清空之前选择的提交
-      setSelectedCommits([]);
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
       // 自动获取该分支的最新提交并选中第一个
       getCommits(selectedProject.id, sourceBranch, '', 1, 1);
     }
@@ -113,20 +116,35 @@ export const MergePage: React.FC = () => {
       mergeType === 'cherry-pick' && 
       commitsState.data && 
       commitsState.data.length > 0 && 
-      selectedCommits.length === 0
+      !selectedCommit
     ) {
       // 自动选择最近的提交
-      setSelectedCommits([commitsState.data[0].id]);
+      setSelectedCommit(commitsState.data[0].id);
+      setSelectedCommitDetail(commitsState.data[0]);
     }
-  }, [commitsState.data, mergeType, selectedCommits.length]);
+  }, [commitsState.data, mergeType, selectedCommit]);
 
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
     // 修复规则3：切换合并类型时清空提交和目标分支选择
-    setSelectedCommits([]);
+    setSelectedCommit(undefined);
     setTargetBranches([]);
     setTargetBranch(undefined);
   }, [mergeType]);
+
+  // 处理commit选择变化
+  const handleCommitChange = (commitId: string | string[] | undefined) => {
+    const id = Array.isArray(commitId) ? commitId[0] : commitId;
+    setSelectedCommit(id);
+    
+    // 从当前的commits状态中找到对应的完整信息
+    if (commitsState.data && id) {
+      const detail = commitsState.data.find(commit => commit.id === id);
+      setSelectedCommitDetail(detail || null);
+    } else {
+      setSelectedCommitDetail(null);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
@@ -148,10 +166,11 @@ export const MergePage: React.FC = () => {
       createMergeRequest(selectedProject.id, options);
     } else {
       const options: CherryPickOptions = {
-        commits: selectedCommits,
+        commits: selectedCommit ? [selectedCommit] : [],
         target_branches: targetBranches,
         title_prefix: 'Cherry-pick',
-        description: `Cherry-pick 提交 ${selectedCommits.join(', ')} 到目标分支`
+        description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
+        commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
       };
       
       createCherryPickMR(selectedProject.id, options);
@@ -166,7 +185,7 @@ export const MergePage: React.FC = () => {
     if (mergeType === 'branch') {
       return sourceBranch && targetBranch && sourceBranch !== targetBranch;
     } else {
-      return selectedCommits.length > 0 && targetBranches.length > 0;
+      return selectedCommit && targetBranches.length > 0;
     }
   };
 
@@ -176,7 +195,7 @@ export const MergePage: React.FC = () => {
       {configInfo.baseUrl && (
         <Alert
           message={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
               <Space>
                 <LinkOutlined />
                 <Text strong>GitLab: {configInfo.baseUrl}</Text>
@@ -185,7 +204,7 @@ export const MergePage: React.FC = () => {
                 </Tag>
               </Space>
               {!configInfo.isConnected && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <Text type="secondary" style={{ fontSize: '12px', display: 'block' }}>
                   请检查配置文件中的服务器地址和访问令牌
                 </Text>
               )}
@@ -319,10 +338,10 @@ export const MergePage: React.FC = () => {
                     <CommitSelector
                       projectId={selectedProject?.id}
                       branch={sourceBranch}
-                      value={selectedCommits}
-                      onChange={(commits) => setSelectedCommits(Array.isArray(commits) ? commits : [commits || ''])}
+                      value={selectedCommit}
+                      onChange={handleCommitChange}
                       placeholder="选择要cherry-pick的提交"
-                      multiple={true}
+                      multiple={false}
                     />
                   </Form.Item>
                 </Col>
@@ -330,7 +349,7 @@ export const MergePage: React.FC = () => {
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item 
-                    label="目标分支(可多选)" 
+                    label="目标分支" 
                     required
                     labelCol={{ flex: '0 0 auto' }}
                     wrapperCol={{ flex: '1 1 auto' }}
@@ -347,7 +366,7 @@ export const MergePage: React.FC = () => {
                           setTargetBranches([]);
                         }
                       }}
-                      placeholder="选择目标分支"
+                      placeholder="选择目标分支(可多选)"
                       multiple={true}
                     />
                   </Form.Item>

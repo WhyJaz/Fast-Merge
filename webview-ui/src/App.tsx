@@ -81,7 +81,7 @@ const App: React.FC = () => {
               }} 
             />
             <Title level={4} style={{ marginBottom: 8 }}>初始化 Fast Merge</Title>
-            <div style={{ color: '#666' }}>正在检查配置状态...</div>
+            <div style={{ color: '#888' }}>正在检查配置状态...</div>
             <style>
               {`
                 @keyframes pulse {
@@ -132,7 +132,7 @@ const App: React.FC = () => {
                     transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#eee';
+                    e.currentTarget.style.backgroundColor = '#aaa';
                     e.currentTarget.style.color = '#666';
                   }}
                   onMouseLeave={(e) => {
@@ -147,6 +147,7 @@ const App: React.FC = () => {
           </>
         )}
       </Content>
+      <div style={{ textAlign: 'center', padding: 12, color: '#666' }}>使用过程中遇到任何问题或者建议，请联系王怀勇</div>
     </Layout>
   );
 };

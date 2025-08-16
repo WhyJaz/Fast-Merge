@@ -1,7 +1,7 @@
 {
 	"name": "assistant",
-	"displayName": "助手",
-	"description": "效率小助手",
+	"displayName": "合并助手",
+	"description": "合并助手",
 	"version": "1.0.0",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
@@ -23,7 +23,7 @@
 	"homepage": "",
 	"categories": [],
 	"keywords": [
-		"助手"
+		"合并助手"
 	],
 	"activationEvents": [
 		"onStartupFinished"
@@ -34,7 +34,7 @@
 			"activitybar": [
 				{
 					"id": "assistant-ActivityBar",
-					"title": "助手",
+					"title": "合并助手",
 					"icon": "assets/icons/icon.svg"
 				}
 			]
