@@ -1,43 +1,49 @@
 import React from 'react';
-import { Card, Alert, Typography, Space, Button, List, Tag, Divider } from 'antd';
+import { Typography, Space, Button, Tag, Table, message } from 'antd';
 import { 
   CheckCircleOutlined, 
   ExclamationCircleOutlined, 
   LinkOutlined,
   BranchesOutlined,
-  NodeIndexOutlined 
+  NodeIndexOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import { MergeResult, CherryPickResult } from '../types/gitlab';
 
-const { Title, Text, Link } = Typography;
+const { Text, Link } = Typography;
 
 interface MergeStatusProps {
   mergeResult?: MergeResult;
   cherryPickResults?: CherryPickResult[];
   loading?: boolean;
-  onReset?: () => void;
 }
 
 export const MergeStatus: React.FC<MergeStatusProps> = ({
   mergeResult,
   cherryPickResults,
-  loading = false,
-  onReset
+  loading = false
 }) => {
+  // 复制MR链接到剪贴板
+  const copyMRLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      message.success('MR链接已复制到剪贴板');
+    } catch (err) {
+      message.error('复制失败，请手动复制');
+    }
+  };
   if (loading) {
     return (
-      <Card style={{ marginTop: 16 }}>
-        <div style={{ textAlign: 'center', padding: 20 }}>
-          <BranchesOutlined 
-            style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} 
-            spin 
-          />
-          <Title level={4} style={{ margin: 0 }}>合并进行中...</Title>
-          <Text type="secondary">
-            正在创建合并请求，请稍候
-          </Text>
-        </div>
-      </Card>
+      <div style={{ marginTop: 16, textAlign: 'center', padding: 20 }}>
+        <BranchesOutlined 
+          style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} 
+          spin 
+        />
+        <div style={{ fontSize: '16px', fontWeight: 600, margin: '8px 0' }}>合并进行中...</div>
+        <Text type="secondary">
+          正在创建合并请求，请稍候
+        </Text>
+      </div>
     );
   }
 
@@ -45,131 +51,134 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     return null;
   }
 
-  // 渲染单个合并结果
-  const renderMergeResult = (result: MergeResult) => (
-    <Alert
-      message={result.success ? '合并请求创建成功' : '合并请求创建失败'}
-      description={
-        <div>
-          <Text>{result.message}</Text>
-          {result.merge_request && (
-            <div style={{ marginTop: 8 }}>
-              <Space direction="vertical" size="small">
-                <div>
-                  <Text strong>标题: </Text>
-                  <Text>{result.merge_request.title}</Text>
-                </div>
-                <div>
-                  <Text strong>源分支: </Text>
-                  <Tag icon={<BranchesOutlined />} color="blue">
-                    {result.merge_request.source_branch}
-                  </Tag>
-                  <Text> → </Text>
-                  <Tag icon={<BranchesOutlined />} color="green">
-                    {result.merge_request.target_branch}
-                  </Tag>
-                </div>
-                <div>
-                  <Link 
-                    href={result.merge_request.web_url} 
-                    target="_blank"
-                  >
-                    <LinkOutlined style={{ marginRight: 4 }} />
-                    查看合并请求 #{result.merge_request.iid}
-                  </Link>
-                </div>
-              </Space>
-            </div>
-          )}
-        </div>
-      }
-      type={result.success ? 'success' : 'error'}
-      icon={result.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
-      style={{ marginTop: 16 }}
-    />
-  );
-
-  // 渲染Cherry Pick结果列表
-  const renderCherryPickResults = (results: CherryPickResult[]) => {
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.length - successCount;
-
-    return (
-      <Card 
-        title={
-          <Space>
-            <NodeIndexOutlined />
-            Cherry Pick 结果
-            <Tag color={successCount > 0 ? 'success' : 'default'}>
-              成功: {successCount}
-            </Tag>
-            <Tag color={failureCount > 0 ? 'error' : 'default'}>
-              失败: {failureCount}
-            </Tag>
-          </Space>
-        }
-        style={{ marginTop: 16 }}
-      >
-        <List
-          dataSource={results}
-          renderItem={(result, index) => (
-            <List.Item key={index}>
-              <div style={{ width: '100%' }}>
-                <Alert
-                  message={
-                    <Space>
-                      <Text strong>目标分支: {result.target_branch}</Text>
-                      <Tag 
-                        color={result.success ? 'success' : 'error'}
-                        icon={result.success ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
-                      >
-                        {result.success ? '成功' : '失败'}
-                      </Tag>
-                    </Space>
-                  }
-                  description={
-                    <div>
-                      <Text>{result.message}</Text>
-                      {result.merge_request && (
-                        <div style={{ marginTop: 8 }}>
-                          <Link 
-                            href={result.merge_request.web_url} 
-                            target="_blank"
-                          >
-                            <LinkOutlined style={{ marginRight: 4 }} />
-                            查看合并请求 #{result.merge_request.iid}
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  }
-                  type={result.success ? 'success' : 'error'}
-                  style={{ border: 'none', padding: 0 }}
-                />
-              </div>
-            </List.Item>
-          )}
-        />
-      </Card>
-    );
+  // 准备表格数据
+  const getTableData = () => {
+    const data: any[] = [];
+    
+    // 处理普通合并请求结果
+    if (mergeResult) {
+      data.push({
+        key: 'merge-result',
+        type: 'Branch Merge',
+        sourceBranch: mergeResult.merge_request?.source_branch || '-',
+        targetBranch: mergeResult.merge_request?.target_branch || '-',
+        title: mergeResult.merge_request?.title || '-',
+        status: mergeResult.success ? '成功' : '失败',
+        mrId: mergeResult.merge_request?.iid,
+        mrUrl: mergeResult.merge_request?.web_url,
+        message: mergeResult.message || mergeResult.error
+      });
+    }
+    
+    // 处理Cherry Pick结果
+    if (cherryPickResults && cherryPickResults.length > 0) {
+      cherryPickResults.forEach((result, index) => {
+        data.push({
+          key: `cherry-pick-${index}`,
+          type: 'Cherry Pick',
+          sourceBranch: '-',
+          targetBranch: result.target_branch,
+          title: result.merge_request?.title || '-',
+          status: result.success ? '成功' : '失败',
+          mrId: result.merge_request?.iid,
+          mrUrl: result.merge_request?.web_url,
+          message: result.message || result.error
+        });
+      });
+    }
+    
+    return data;
   };
 
+  // 表格列定义
+  const columns = [
+    {
+      title: '目标分支',
+      dataIndex: 'targetBranch',
+      key: 'targetBranch',
+      render: (branch: string, record: any) => (
+        <Space>
+          <Tag 
+            icon={<BranchesOutlined />} 
+            color={record.status === '成功' ? 'green' : 'red'}
+          >
+            {branch}
+          </Tag>
+          {record.status === '失败' && (
+            <Tag icon={<ExclamationCircleOutlined />} color="error">
+              失败
+            </Tag>
+          )}
+        </Space>
+      )
+    },
+    {
+      title: 'MR链接',
+      dataIndex: 'mrUrl',
+      key: 'mrUrl',
+      render: (url: string, record: any) => url ? (
+        <Space>
+          <Link href={url} target="_blank">
+            <LinkOutlined /> #{record.mrId}
+          </Link>
+          <Button 
+            type="text" 
+            size="small" 
+            icon={<CopyOutlined />}
+            onClick={() => copyMRLink(url)}
+            title="复制MR链接"
+          />
+        </Space>
+      ) : (
+        <span style={{ color: '#999' }}>创建失败</span>
+      )
+    }
+  ];
+
+  const tableData = getTableData();
+  const successCount = tableData.filter(item => item.status === '成功').length;
+  const failureCount = tableData.length - successCount;
+
   return (
-    <div>
-      {mergeResult && renderMergeResult(mergeResult)}
-      
-      {cherryPickResults && cherryPickResults.length > 0 && renderCherryPickResults(cherryPickResults)}
-      
-      {(mergeResult || (cherryPickResults && cherryPickResults.length > 0)) && onReset && (
-        <>
-          <Divider />
-          <div style={{ textAlign: 'center' }}>
-            <Button onClick={onReset}>
-              创建新的合并请求
-            </Button>
-          </div>
-        </>
-      )}
+    <div style={{ marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Space>
+          <Text strong>合并请求结果</Text>
+          <Tag color={successCount > 0 ? 'success' : 'default'}>
+            成功: {successCount}
+          </Tag>
+          <Tag color={failureCount > 0 ? 'error' : 'default'}>
+            失败: {failureCount}
+          </Tag>
+        </Space>
+        <Button 
+          icon={<CopyOutlined />}
+          onClick={async () => {
+            const urls = tableData
+              .filter(item => item.mrUrl && item.status === '成功')
+              .map(item => item.mrUrl)
+              .join('\n');
+            if (urls) {
+              try {
+                await navigator.clipboard.writeText(urls);
+                message.success('所有成功的MR链接已复制');
+              } catch (err) {
+                message.error('复制失败，请手动复制');
+              }
+            }
+          }}
+          disabled={successCount === 0}
+        >
+          复制所有链接
+        </Button>
+      </div>
+      <Table
+        columns={columns}
+        dataSource={tableData}
+        pagination={false}
+        size="middle"
+        showHeader={true}
+      />
     </div>
   );
 };

@@ -9,11 +9,12 @@ const { Text } = Typography;
 
 interface BranchSelectorProps {
   projectId?: number;
-  value?: string;
-  onChange?: (branch: string | undefined) => void;
+  value?: string | string[];
+  onChange?: (branch: string | string[] | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
   defaultBranch?: string;
+  multiple?: boolean;
 }
 
 export const BranchSelector: React.FC<BranchSelectorProps> = ({
@@ -22,7 +23,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   onChange,
   placeholder = "选择分支",
   disabled = false,
-  defaultBranch
+  defaultBranch,
+  multiple = false
 }) => {
   const { getBranches, branchesState } = useGitLabApi();
   const [searchText, setSearchText] = useState('');
@@ -43,8 +45,12 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   };
 
   // 选择分支
-  const handleSelect = (branchName: string) => {
-    onChange?.(branchName);
+  const handleSelect = (branchName: string | string[]) => {
+    if (multiple) {
+      onChange?.(branchName);
+    } else {
+      onChange?.(Array.isArray(branchName) ? branchName[0] : branchName);
+    }
   };
 
   // 过滤分支
@@ -102,7 +108,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
             </Text>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+        {/* <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
           {branch.default && (
             <Tag icon={<CrownOutlined />} color="gold">
               默认
@@ -113,7 +119,7 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
               保护
             </Tag>
           )}
-        </div>
+        </div> */}
       </div>
     </Option>
   );
@@ -121,12 +127,13 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   return (
     <Select
       showSearch
+      mode={multiple ? "multiple" : undefined}
       value={value}
       placeholder={placeholder}
       disabled={disabled || !projectId}
       loading={branchesState.loading}
       onSearch={handleSearch}
-      onSelect={handleSelect}
+      onChange={handleSelect}
       filterOption={false}
       style={{ width: '100%' }}
       notFoundContent={

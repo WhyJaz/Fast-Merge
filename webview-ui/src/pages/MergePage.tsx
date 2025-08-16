@@ -145,12 +145,7 @@ export const MergePage: React.FC = () => {
     }
   };
 
-  const handleReset = () => {
-    setSelectedCommits([]);
-    setTargetBranches([]);
-    setIsSubmitting(false);
-    setShowResults(false);
-  };
+
 
   const canSubmit = () => {
     if (!selectedProject) return false;
@@ -329,12 +324,18 @@ export const MergePage: React.FC = () => {
                   >
                     <BranchSelector
                       projectId={selectedProject?.id}
-                      value={targetBranches.join(',')}
+                      value={targetBranches}
                       onChange={(branches) => {
-                        // 这里需要处理多选逻辑，暂时简化处理
-                        setTargetBranches(branches ? [branches] : []);
+                        if (Array.isArray(branches)) {
+                          setTargetBranches(branches);
+                        } else if (branches) {
+                          setTargetBranches([branches]);
+                        } else {
+                          setTargetBranches([]);
+                        }
                       }}
                       placeholder="选择目标分支"
+                      multiple={true}
                     />
                   </Form.Item>
                 </Col>
@@ -360,14 +361,11 @@ export const MergePage: React.FC = () => {
 
       {/* 结果展示区域 */}
       {showResults && (
-        <Card title="合并结果">
-          <MergeStatus
-            mergeResult={mergeRequestState.data || undefined}
-            cherryPickResults={cherryPickState.data || undefined}
-            loading={isSubmitting}
-            onReset={handleReset}
-          />
-        </Card>
+        <MergeStatus
+          mergeResult={mergeRequestState.data || undefined}
+          cherryPickResults={cherryPickState.data || undefined}
+          loading={isSubmitting}
+        />
       )}
     </div>
   );
