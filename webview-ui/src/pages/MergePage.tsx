@@ -186,10 +186,19 @@ export const MergePage: React.FC = () => {
 
       {/* 主要配置区域 */}
       <Card title="合并请求配置" style={{ marginBottom: 16 }}>
-        <Form layout="vertical">
+        <Form 
+          layout="horizontal"
+          labelCol={{ flex: '0 0 auto' }}
+          wrapperCol={{ flex: '1 1 auto' }}
+        >
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item label="GitLab 项目" required>
+              <Form.Item 
+                label="GitLab 项目" 
+                required
+                labelCol={{ flex: '0 0 auto' }}
+                wrapperCol={{ flex: '1 1 auto' }}
+              >
                 <ProjectSelector
                   value={selectedProject}
                   onChange={setSelectedProject}
@@ -201,7 +210,12 @@ export const MergePage: React.FC = () => {
 
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item label="合并类型" required>
+              <Form.Item 
+                label="合并类型" 
+                required
+                labelCol={{ flex: '0 0 auto' }}
+                wrapperCol={{ flex: '1 1 auto' }}
+              >
                 <Radio.Group 
                   value={mergeType} 
                   onChange={(e) => setMergeType(e.target.value)}
@@ -224,42 +238,14 @@ export const MergePage: React.FC = () => {
           </Row>
 
           {mergeType === 'branch' ? (
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item 
-                  label="源分支" 
-                  required
-                >
-                  <BranchSelector
-                    projectId={selectedProject?.id}
-                    value={sourceBranch}
-                    onChange={setSourceBranch}
-                    placeholder="选择源分支"
-                    defaultBranch={currentRepoState.data?.currentBranch}
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item 
-                  label="目标分支" 
-                  required
-                >
-                  <BranchSelector
-                    projectId={selectedProject?.id}
-                    value={targetBranch}
-                    onChange={setTargetBranch}
-                    placeholder="选择目标分支"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-          ) : (
             <>
               <Row gutter={16}>
-                <Col span={12}>
+                <Col span={24}>
                   <Form.Item 
                     label="源分支" 
                     required
+                    labelCol={{ flex: '0 0 auto' }}
+                    wrapperCol={{ flex: '1 1 auto' }}
                   >
                     <BranchSelector
                       projectId={selectedProject?.id}
@@ -270,10 +256,52 @@ export const MergePage: React.FC = () => {
                     />
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+              </Row>
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item 
+                    label="目标分支" 
+                    required
+                    labelCol={{ flex: '0 0 auto' }}
+                    wrapperCol={{ flex: '1 1 auto' }}
+                  >
+                    <BranchSelector
+                      projectId={selectedProject?.id}
+                      value={targetBranch}
+                      onChange={setTargetBranch}
+                      placeholder="选择目标分支"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          ) : (
+            <>
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item 
+                    label="源分支" 
+                    required
+                    labelCol={{ flex: '0 0 auto' }}
+                    wrapperCol={{ flex: '1 1 auto' }}
+                  >
+                    <BranchSelector
+                      projectId={selectedProject?.id}
+                      value={sourceBranch}
+                      onChange={setSourceBranch}
+                      placeholder="选择源分支"
+                      defaultBranch={currentRepoState.data?.currentBranch}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={16}>
+                <Col span={24}>
                   <Form.Item 
                     label="选择提交" 
                     required
+                    labelCol={{ flex: '0 0 auto' }}
+                    wrapperCol={{ flex: '1 1 auto' }}
                   >
                     <CommitSelector
                       projectId={selectedProject?.id}
@@ -289,8 +317,10 @@ export const MergePage: React.FC = () => {
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item 
-                    label="目标分支 (支持多选)" 
+                    label="目标分支(可多选)" 
                     required
+                    labelCol={{ flex: '0 0 auto' }}
+                    wrapperCol={{ flex: '1 1 auto' }}
                   >
                     <BranchSelector
                       projectId={selectedProject?.id}
