@@ -183,17 +183,16 @@ export class GitLabService {
    * 创建Cherry Pick合并请求
    */
   async createCherryPickMergeRequests(projectId: number, options: CherryPickOptions): Promise<CherryPickResult[]> {
-    const results: CherryPickResult[] = [];
-
-    for (const targetBranch of options.target_branches) {
-      const tempBranchName = `cherry-pick-${Date.now()}-${targetBranch}`;
+    // 创建处理单个目标分支的异步函数
+    const processBranch = async (targetBranch: string): Promise<CherryPickResult> => {
+      const tempBranchName = `cherry-pick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${targetBranch}`;
       
       try {
         // 直接基于要cherry-pick的commit创建分支
         // 这样分支本身就包含了cherry-pick的内容，无需额外的cherry-pick操作
         await this.createBranch(projectId, tempBranchName, options.commits[0]);
 
-        // 3. 创建合并请求
+        // 创建合并请求
         let title = '';
         if (options.commit_details && options.commit_details.length > 0) {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commit_details[0].title}`;
@@ -211,7 +210,7 @@ export class GitLabService {
 
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
         
-        results.push({
+        return {
           target_branch: targetBranch,
           success: result.success,
           merge_request: result.merge_request,
@@ -219,7 +218,7 @@ export class GitLabService {
           message: result.success 
             ? `成功创建 Cherry-pick 合并请求到分支 ${targetBranch}`
             : result.message
-        });
+        };
       } catch (error: any) {
         // 如果操作失败，尝试清理可能创建的临时分支
         try {
@@ -228,15 +227,21 @@ export class GitLabService {
           // 忽略删除分支的错误，因为分支可能根本没有创建成功
         }
 
-        results.push({
+        return {
           target_branch: targetBranch,
           success: false,
           error: error.message || 'Cherry-pick 操作失败',
           message: `Cherry-pick 到分支 ${targetBranch} 失败: ${error.message || '未知错误'}`
-        });
+        };
       }
-    }
+    };
 
+    // 并发处理所有目标分支
+    const promises = options.target_branches.map(targetBranch => processBranch(targetBranch));
+    
+    // 等待所有操作完成
+    const results = await Promise.all(promises);
+    
     return results;
   }
 
