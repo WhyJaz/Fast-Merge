@@ -115,10 +115,6 @@ export class ConfigManager {
       gitlab: {
         ...DEFAULT_CONFIG.gitlab,
         ...config.gitlab
-      },
-      merge: {
-        ...DEFAULT_CONFIG.merge,
-        ...config.merge
       }
     };
   }

@@ -96,7 +96,7 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
         <Paragraph>
           <Text strong>GitLab 服务器地址：</Text>
           <br />
-          • 公共 GitLab：<Text code>https://gitlab.com</Text>
+          • 公共 GitLab：<Text code>https://gitlab.seeyon.com</Text>
           <br />
           • 私有实例：<Text code>https://your-gitlab-instance.com</Text>
         </Paragraph>
@@ -125,12 +125,8 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
             }}>
   {`{
     "gitlab": {
-      "baseUrl": "https://gitlab.com",
-      "token": "glpat-xxxxxxxxxxxxxxxxxxxx"
-    },
-    "merge": {
-      "removeSourceBranch": false,
-      "squash": false
+      "baseUrl": "https://gitlab.seeyon.com",
+      "token": "xxxxxxxxxxxxxxxxxxxx"
     }
   }`}
             </pre>
