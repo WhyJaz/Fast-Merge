@@ -177,16 +177,7 @@ export class GitLabService {
     );
   }
 
-  /**
-   * 使用GitLab API执行Cherry Pick操作到指定分支
-   */
-  async cherryPickCommit(projectId: number, commitSha: string, targetBranch: string): Promise<GitLabCommit> {
-    const response = await this.httpClient.post<GitLabCommit>(
-      `/projects/${projectId}/repository/commits/${commitSha}/cherry_pick`,
-      { branch: targetBranch }
-    );
-    return response.data;
-  }
+
 
   /**
    * 创建Cherry Pick合并请求
@@ -198,13 +189,9 @@ export class GitLabService {
       const tempBranchName = `cherry-pick-${Date.now()}-${targetBranch}`;
       
       try {
-        // 1. 创建临时分支（基于目标分支）
-        await this.createBranch(projectId, tempBranchName, targetBranch);
-
-        // 2. 在临时分支上执行cherry-pick操作
-        for (const commitSha of options.commits) {
-          await this.cherryPickCommit(projectId, commitSha, tempBranchName);
-        }
+        // 直接基于要cherry-pick的commit创建分支
+        // 这样分支本身就包含了cherry-pick的内容，无需额外的cherry-pick操作
+        await this.createBranch(projectId, tempBranchName, options.commits[0]);
 
         // 3. 创建合并请求
         let title = '';
