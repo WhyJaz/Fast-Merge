@@ -57,6 +57,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     
     // 处理普通合并请求结果
     if (mergeResult) {
+      const hasConflicts = (mergeResult.merge_request as any)?.has_conflicts === true || 
+                        mergeResult.merge_request?.merge_status === 'cannot_be_merged';
+      
       data.push({
         key: 'merge-result',
         type: 'Branch Merge',
@@ -64,6 +67,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         targetBranch: mergeResult.merge_request?.target_branch || '-',
         title: mergeResult.merge_request?.title || '-',
         status: mergeResult.success ? '成功' : '失败',
+        conflictStatus: hasConflicts ? '有冲突' : '无冲突',
         mrId: mergeResult.merge_request?.iid,
         mrUrl: mergeResult.merge_request?.web_url,
         message: mergeResult.message || mergeResult.error
@@ -73,6 +77,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     // 处理Cherry Pick结果
     if (cherryPickResults && cherryPickResults.length > 0) {
       cherryPickResults.forEach((result, index) => {
+        const hasConflicts = (result.merge_request as any)?.has_conflicts === true || 
+                          result.merge_request?.merge_status === 'cannot_be_merged';
+        
         data.push({
           key: `cherry-pick-${index}`,
           type: 'Cherry Pick',
@@ -80,6 +87,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           targetBranch: result.target_branch,
           title: result.merge_request?.title || '-',
           status: result.success ? '成功' : '失败',
+          conflictStatus: hasConflicts ? '有冲突' : '无冲突',
           mrId: result.merge_request?.iid,
           mrUrl: result.merge_request?.web_url,
           message: result.message || result.error
@@ -111,6 +119,20 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           )}
         </Space>
       )
+    },
+    {
+      title: '冲突状态',
+      dataIndex: 'conflictStatus',
+      key: 'conflictStatus',
+      render: (status: string, record: any) => {
+        if (!record.mrUrl) return <span style={{ color: '#999' }}>-</span>;
+        
+        if (status === '有冲突') {
+          return <Tag icon={<ExclamationCircleOutlined />} color="error">有冲突</Tag>;
+        } else {
+          return <Tag icon={<CheckCircleOutlined />} color="success">无冲突</Tag>;
+        }
+      }
     },
     {
       title: 'MR链接',

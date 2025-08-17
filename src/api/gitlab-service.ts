@@ -140,11 +140,29 @@ export class GitLabService {
         options
       );
       
-      return {
-        success: true,
-        merge_request: response.data,
-        message: `合并请求已创建: ${response.data.title}`
-      };
+      // 创建成功后等待2秒再检查冲突状态，让GitLab有时间计算
+      try {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const updatedMR = await this.checkMergeRequestConflicts(projectId, response.data.iid);
+        console.log('DEBUG: 延时后检查结果:', {
+          merge_status: updatedMR.merge_status,
+          has_conflicts: (updatedMR as any).has_conflicts,
+          title: updatedMR.title
+        });
+        return {
+          success: true,
+          merge_request: updatedMR,
+          message: `合并请求已创建: ${updatedMR.title}`
+        };
+      } catch (checkError) {
+        console.error('DEBUG: 冲突检查失败:', checkError);
+        // 冲突检查失败，返回原始结果
+        return {
+          success: true,
+          merge_request: response.data,
+          message: `合并请求已创建: ${response.data.title}（冲突状态检查失败）`
+        };
+      }
     } catch (error: any) {
       return {
         success: false,
@@ -180,6 +198,17 @@ export class GitLabService {
 
 
   /**
+   * 检查合并请求的冲突状态
+   */
+  async checkMergeRequestConflicts(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
+    const response = await this.httpClient.get<GitLabMergeRequest>(
+      `/projects/${projectId}/merge_requests/${mergeRequestIid}`,
+      { with_merge_status_recheck: 'true' }
+    );
+    return response.data;
+  }
+
+  /**
    * 创建Cherry Pick合并请求
    */
   async createCherryPickMergeRequests(projectId: number, options: CherryPickOptions): Promise<CherryPickResult[]> {
@@ -210,15 +239,22 @@ export class GitLabService {
 
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
         
-        return {
-          target_branch: targetBranch,
-          success: result.success,
-          merge_request: result.merge_request,
-          error: result.error,
-          message: result.success 
-            ? `成功创建 Cherry-pick 合并请求到分支 ${targetBranch}`
-            : result.message
-        };
+        if (result.success && result.merge_request) {
+          // createMergeRequest 已经包含了冲突检测，直接返回结果
+          return {
+            target_branch: targetBranch,
+            success: true,
+            merge_request: result.merge_request,
+            message: `成功创建 Cherry-pick 合并请求到分支 ${targetBranch}`
+          };
+        } else {
+          return {
+            target_branch: targetBranch,
+            success: false,
+            error: result.error,
+            message: result.message || `创建 Cherry-pick 合并请求失败`
+          };
+        }
       } catch (error: any) {
         // 如果操作失败，尝试清理可能创建的临时分支
         try {
