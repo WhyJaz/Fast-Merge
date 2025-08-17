@@ -45,6 +45,7 @@ body {
   color: var(--vscode-editor-foreground, #000000) !important;
 }
 
+
 .ant-typography.ant-typography-secondary {
   color: var(--vscode-descriptionForeground, #717171) !important;
 }
@@ -193,6 +194,19 @@ body {
   border-radius: 2px !important;
 }
 
+/* 链接样式 - 使用更具体的选择器和更高优先级 */
+a,
+a:link,
+.ant-typography a,
+.ant-typography-link,
+.ant-typography .ant-typography-link,
+span.ant-typography a,
+span.ant-typography-link {
+  color: #1890ff !important;
+  text-decoration: underline !important;
+}
+
+
 /* 警告框样式 */
 .ant-alert {
   border-radius: 4px !important;
@@ -271,6 +285,7 @@ body {
     background-color: var(--vscode-editor-background, #1e1e1e);
     color: var(--vscode-editor-foreground, #d4d4d4);
   }
+  
   
   /* 确保暗色主题下的文字可见性 */
   .ant-radio-wrapper,

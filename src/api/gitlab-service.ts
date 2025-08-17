@@ -142,7 +142,7 @@ export class GitLabService {
       
       // 创建成功后等待2秒再检查冲突状态，让GitLab有时间计算
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         const updatedMR = await this.checkMergeRequestConflicts(projectId, response.data.iid);
         console.log('DEBUG: 延时后检查结果:', {
           merge_status: updatedMR.merge_status,

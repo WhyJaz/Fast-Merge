@@ -1,31 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Radio, 
-  Space, 
-  Typography, 
-  Divider,
-  Alert,
-  Spin,
-  Button,
-  Tag,
-  Row,
-  Col,
-  Form
-} from 'antd';
-import { 
-  BranchesOutlined, 
-  NodeIndexOutlined,
+import {
+  BranchesOutlined,
+  LinkOutlined,
   MergeOutlined,
-  LinkOutlined
+  NodeIndexOutlined,
+  SettingOutlined
 } from '@ant-design/icons';
-import { ProjectSelector } from '../components/ProjectSelector';
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Form,
+  Radio,
+  Row,
+  Space,
+  Tag,
+  Typography
+} from 'antd';
+import React, { useEffect, useState } from 'react';
 import { BranchSelector } from '../components/BranchSelector';
 import { CommitSelector } from '../components/CommitSelector';
 import { MergeStatus } from '../components/MergeStatus';
-import { useGitLabApi } from '../hooks/useGitLabApi';
+import { ProjectSelector } from '../components/ProjectSelector';
 import { useConfig } from '../hooks/useConfig';
-import { GitLabProject, GitLabCommit, MergeRequestOptions, CherryPickOptions } from '../types/gitlab';
+import { useGitLabApi } from '../hooks/useGitLabApi';
+import { CherryPickOptions, GitLabCommit, GitLabProject, MergeRequestOptions } from '../types/gitlab';
+import { vscode } from '../utils/vscode';
 
 const { Text, Title } = Typography;
 
@@ -208,6 +208,17 @@ export const MergePage: React.FC = () => {
                   请检查配置文件中的服务器地址和访问令牌
                 </Text>
               )}
+              <div style={{position: 'absolute', right: 6, top: 6}}>
+                <Button 
+                  icon={<SettingOutlined />}
+                  onClick={() => vscode.postMessage({ type: 'config:open' })}
+                  title="编辑 GitLab 配置文件"
+                  type="default"
+                  size="small"
+                  
+                >
+                </Button>
+              </div>
             </div>
           }
           type={configInfo.isConnected ? 'success' : 'warning'}
