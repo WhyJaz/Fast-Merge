@@ -37,11 +37,7 @@ export class GitLabService {
     if (!this.config) {
       // 如果没有完整配置，创建一个默认配置
       const defaultConfig: FastMergeConfig = {
-        gitlab: gitlabConfig,
-        merge: {
-          removeSourceBranch: false,
-          squash: false
-        }
+        gitlab: gitlabConfig
       };
       this.updateConfig(defaultConfig);
     } else {

@@ -40,7 +40,8 @@ export const MergePage: React.FC = () => {
     currentRepoState,
     mergeRequestState,
     cherryPickState,
-    commitsState
+    commitsState,
+    clearState
   } = useGitLabApi();
   
   const { configInfo } = useConfig();
@@ -99,12 +100,15 @@ export const MergePage: React.FC = () => {
     }
   }, [selectedProject]);
 
-  // 当源分支变化且为cherry-pick模式时，清空提交选择并自动获取最新提交
+  // 当源分支变化
   useEffect(() => {
-    if (selectedProject && sourceBranch && mergeType === 'cherry-pick') {
-      // 修复：先清空之前选择的提交
-      setSelectedCommit(undefined);
-      setSelectedCommitDetail(null);
+    if (selectedProject && sourceBranch) {
+      // 当源分支变化且为cherry-pick模式时，清空提交选择并自动获取最新提交
+      if ( mergeType === 'cherry-pick') {
+        // 修复：先清空之前选择的提交
+        setSelectedCommit(undefined);
+        setSelectedCommitDetail(null);
+      }
       // 自动获取该分支的最新提交并选中第一个
       getCommits(selectedProject.id, sourceBranch, '', 1, 1);
     }
@@ -148,14 +152,17 @@ export const MergePage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
-
-    // 隐藏之前的结果，在新请求开始时清除旧结果
+    let mergeTitle = commitsState?.data?.[0]?.title || `Merge ${sourceBranch} into ${targetBranch}`;
+    
+    // 清除之前的结果，准备显示新的merge request结果
+    clearState();
     setShowResults(false);
     setIsSubmitting(true);
 
     if (mergeType === 'branch') {
+      // 获取源分支最新commit用作标题
       const options: MergeRequestOptions = {
-        title: `Merge ${sourceBranch} into ${targetBranch}`,
+        title: mergeTitle,
         description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
         source_branch: sourceBranch!,
         target_branch: targetBranch!,
