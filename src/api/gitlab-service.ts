@@ -155,34 +155,73 @@ export class GitLabService {
   }
 
   /**
+   * 创建新分支
+   */
+  async createBranch(projectId: number, branchName: string, ref: string): Promise<GitLabBranch> {
+    const response = await this.httpClient.post<GitLabBranch>(
+      `/projects/${projectId}/repository/branches`,
+      { 
+        branch: branchName,
+        ref: ref
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * 删除分支
+   */
+  async deleteBranch(projectId: number, branchName: string): Promise<void> {
+    await this.httpClient.delete(
+      `/projects/${projectId}/repository/branches/${encodeURIComponent(branchName)}`
+    );
+  }
+
+  /**
+   * 使用GitLab API执行Cherry Pick操作到指定分支
+   */
+  async cherryPickCommit(projectId: number, commitSha: string, targetBranch: string): Promise<GitLabCommit> {
+    const response = await this.httpClient.post<GitLabCommit>(
+      `/projects/${projectId}/repository/commits/${commitSha}/cherry_pick`,
+      { branch: targetBranch }
+    );
+    return response.data;
+  }
+
+  /**
    * 创建Cherry Pick合并请求
    */
   async createCherryPickMergeRequests(projectId: number, options: CherryPickOptions): Promise<CherryPickResult[]> {
     const results: CherryPickResult[] = [];
 
     for (const targetBranch of options.target_branches) {
+      const tempBranchName = `cherry-pick-${Date.now()}-${targetBranch}`;
+      
       try {
-        // 为每个目标分支创建一个合并请求
-        // 使用commit的消息作为标题
+        // 1. 创建临时分支（基于目标分支）
+        await this.createBranch(projectId, tempBranchName, targetBranch);
+
+        // 2. 在临时分支上执行cherry-pick操作
+        for (const commitSha of options.commits) {
+          await this.cherryPickCommit(projectId, commitSha, tempBranchName);
+        }
+
+        // 3. 创建合并请求
         let title = '';
         if (options.commit_details && options.commit_details.length > 0) {
-          // 使用commit的title作为标题
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commit_details[0].title}`;
         } else {
-          // 回退到原来的逻辑
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;
         }
         
         const mergeRequestOptions: MergeRequestOptions = {
           title,
           description: options.description || `Cherry-pick commits: ${options.commits.join(', ')}`,
-          source_branch: `cherry-pick-${Date.now()}-${targetBranch}`, // 临时分支名
-          target_branch: targetBranch
+          source_branch: tempBranchName,
+          target_branch: targetBranch,
+          remove_source_branch: true  // 合并后自动删除临时分支
         };
 
-        // 注意：这里简化了实现，实际应该先创建分支并cherry-pick提交
-        // 在生产环境中，需要通过Git命令或GitLab API来实际执行cherry-pick操作
-        
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
         
         results.push({
@@ -190,14 +229,23 @@ export class GitLabService {
           success: result.success,
           merge_request: result.merge_request,
           error: result.error,
-          message: result.message
+          message: result.success 
+            ? `成功创建 Cherry-pick 合并请求到分支 ${targetBranch}`
+            : result.message
         });
       } catch (error: any) {
+        // 如果操作失败，尝试清理可能创建的临时分支
+        try {
+          await this.deleteBranch(projectId, tempBranchName);
+        } catch (deleteError) {
+          // 忽略删除分支的错误，因为分支可能根本没有创建成功
+        }
+
         results.push({
           target_branch: targetBranch,
           success: false,
-          error: error.message || '创建合并请求失败',
-          message: `为分支 ${targetBranch} 创建合并请求失败: ${error.message || '未知错误'}`
+          error: error.message || 'Cherry-pick 操作失败',
+          message: `Cherry-pick 到分支 ${targetBranch} 失败: ${error.message || '未知错误'}`
         });
       }
     }
