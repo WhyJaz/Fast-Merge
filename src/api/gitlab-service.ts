@@ -240,9 +240,23 @@ export class GitLabService {
       const tempBranchName = `cherry-pick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${targetBranch}`;
       
       try {
-        // 直接基于要cherry-pick的commit创建分支
-        // 这样分支本身就包含了cherry-pick的内容，无需额外的cherry-pick操作
-        await this.createBranch(projectId, tempBranchName, options.commits[0]);
+        // 基于目标分支创建临时分支
+        await this.createBranch(projectId, tempBranchName, targetBranch);
+
+        // 对每个commit执行cherry-pick操作
+        for (const commitId of options.commits) {
+          try {
+            // 使用GitLab API的cherry-pick功能
+            await this.httpClient.post(
+              `/projects/${projectId}/repository/commits/${commitId}/cherry_pick`,
+              { branch: tempBranchName }
+            );
+          } catch (cherryPickError: any) {
+            // 如果cherry-pick失败，清理临时分支并返回错误
+            await this.deleteBranch(projectId, tempBranchName);
+            throw new Error(`Cherry-pick commit ${commitId} 失败: ${cherryPickError.message}`);
+          }
+        }
 
         // 创建合并请求
         let title = '';
@@ -263,7 +277,6 @@ export class GitLabService {
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
         
         if (result.success && result.merge_request) {
-          // createMergeRequest 已经包含了冲突检测，直接返回结果
           return {
             target_branch: targetBranch,
             success: true,
@@ -283,7 +296,7 @@ export class GitLabService {
         try {
           await this.deleteBranch(projectId, tempBranchName);
         } catch (deleteError) {
-          // 忽略删除分支的错误，因为分支可能根本没有创建成功
+          // 忽略删除分支的错误
         }
 
         return {
