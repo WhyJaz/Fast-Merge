@@ -62,13 +62,11 @@ export const MergePage: React.FC = () => {
     getCurrentRepo();
   }, [getCurrentRepo]);
 
-  // 处理当前仓库信息
+  // 处理当前仓库信息 - 移除源分支默认值设置
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
       const repoInfo = currentRepoState.data;
-      if (repoInfo.isGitRepository && repoInfo.currentBranch) {
-        setSourceBranch(repoInfo.currentBranch);
-      }
+      // 不再自动设置源分支为当前分支，让用户手动选择
     }
   }, [currentRepoState]);
 
@@ -252,7 +250,7 @@ export const MergePage: React.FC = () => {
                 <ProjectSelector
                   value={selectedProject}
                   onChange={setSelectedProject}
-                  placeholder="搜索并选择 GitLab 项目"
+                  placeholder="可输入搜索，以选择 GitLab 项目"
                 />
               </Form.Item>
             </Col>
@@ -301,8 +299,7 @@ export const MergePage: React.FC = () => {
                       projectId={selectedProject?.id}
                       value={sourceBranch}
                       onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
-                      placeholder="选择源分支"
-                      defaultBranch={currentRepoState.data?.currentBranch}
+                      placeholder="可输入进行搜索，以选择源分支"
                     />
                   </Form.Item>
                 </Col>
@@ -319,7 +316,7 @@ export const MergePage: React.FC = () => {
                       projectId={selectedProject?.id}
                       value={targetBranch}
                       onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch[0] : branch)}
-                      placeholder="选择目标分支"
+                      placeholder="可输入进行搜索，以选择目标分支"
                     />
                   </Form.Item>
                 </Col>
@@ -339,8 +336,7 @@ export const MergePage: React.FC = () => {
                       projectId={selectedProject?.id}
                       value={sourceBranch}
                       onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
-                      placeholder="选择源分支"
-                      defaultBranch={currentRepoState.data?.currentBranch}
+                      placeholder="可输入进行搜索，以选择源分支"
                     />
                   </Form.Item>
                 </Col>
@@ -384,7 +380,7 @@ export const MergePage: React.FC = () => {
                           setTargetBranches([]);
                         }
                       }}
-                      placeholder="选择目标分支(可多选)"
+                      placeholder="可输入进行搜索，以选择目标分支(可多选)"
                       multiple={true}
                     />
                   </Form.Item>

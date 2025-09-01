@@ -13,7 +13,6 @@ interface BranchSelectorProps {
   onChange?: (branch: string | string[] | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
-  defaultBranch?: string;
   multiple?: boolean;
 }
 
@@ -23,7 +22,6 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   onChange,
   placeholder = "选择分支",
   disabled = false,
-  defaultBranch,
   multiple = false
 }) => {
   const { getBranches, branchesState } = useGitLabApi();
