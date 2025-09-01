@@ -243,19 +243,26 @@ export class GitLabService {
         // 基于目标分支创建临时分支
         await this.createBranch(projectId, tempBranchName, targetBranch);
 
-        // 对每个commit执行cherry-pick操作
-        for (const commitId of options.commits) {
+        // 并发执行所有commit的cherry-pick操作
+        const cherryPickPromises = options.commits.map(async (commitId) => {
           try {
             // 使用GitLab API的cherry-pick功能
-            await this.httpClient.post(
+            return await this.httpClient.post(
               `/projects/${projectId}/repository/commits/${commitId}/cherry_pick`,
               { branch: tempBranchName }
             );
           } catch (cherryPickError: any) {
-            // 如果cherry-pick失败，清理临时分支并返回错误
-            await this.deleteBranch(projectId, tempBranchName);
             throw new Error(`Cherry-pick commit ${commitId} 失败: ${cherryPickError.message}`);
           }
+        });
+
+        // 等待所有cherry-pick操作完成
+        try {
+          await Promise.all(cherryPickPromises);
+        } catch (cherryPickError: any) {
+          // 如果任何cherry-pick失败，清理临时分支并返回错误
+          await this.deleteBranch(projectId, tempBranchName);
+          throw cherryPickError;
         }
 
         // 创建合并请求

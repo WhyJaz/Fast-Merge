@@ -305,3 +305,9 @@ span.ant-typography-link {
     color: var(--vscode-editor-foreground, #d4d4d4) !important;
   }
 }
+
+:where(.css-dev-only-do-not-override-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item{
+  color: inherit;
+}
+:where(.css-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item{
+  color: inherit }
