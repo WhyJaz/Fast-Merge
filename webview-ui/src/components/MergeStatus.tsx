@@ -107,13 +107,12 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       render: (branch: string, record: any) => (
         <Space>
           <Tag 
-            icon={<BranchesOutlined />} 
             color={record.status === '成功' ? 'green' : 'red'}
           >
             {branch}
           </Tag>
           {record.status === '失败' && (
-            <Tag icon={<ExclamationCircleOutlined />} color="error">
+            <Tag color="error">
               失败
             </Tag>
           )}
@@ -128,9 +127,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         if (!record.mrUrl) return <span style={{ color: '#999' }}>-</span>;
         
         if (status === '有冲突') {
-          return <Tag icon={<ExclamationCircleOutlined />} color="error">有冲突</Tag>;
+          return <Tag color="error">有冲突</Tag>;
         } else {
-          return <Tag icon={<CheckCircleOutlined />} color="success">无冲突</Tag>;
+          return <Tag color="success">无冲突</Tag>;
         }
       }
     },
@@ -140,7 +139,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       key: 'mrUrl',
       render: (url: string, record: any) => url ? (
         <Space>
-          <Link href={url} target="_blank">
+          <Link href={url + '/diffs'} target="_blank">
             <LinkOutlined /> #{record.mrId}
           </Link>
           <Button 

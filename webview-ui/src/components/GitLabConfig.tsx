@@ -96,19 +96,18 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
         <Paragraph>
           <Text strong>GitLab 服务器地址：</Text>
           <br />
-          • 公共 GitLab：<Text code>https://gitlab.com</Text>
+          • GitLab：<Text code>https://gitlab.seeyon.com</Text>
           <br />
-          • 私有实例：<Text code>https://your-gitlab-instance.com</Text>
         </Paragraph>
         
         <Paragraph>
-          <Text strong>Personal Access Token：</Text>
+          <Text strong>Access Token 配置说明：</Text>
           <br />
-          1. 前往 GitLab → Settings → Access Tokens
+          1. 前往 GitLab Settings → Preferences → Access Tokens
           <br />
-          2. 创建新的 Personal Access Token
+          2. 创建新的 Personal Access Token，填好 Name 和 Expires at
           <br />
-          3. 确保勾选 <Text code>api</Text> 权限
+          3. 确保勾选 Scopes下的各项 <Text code>api</Text> 权限
           <br />
           4. 复制生成的 token 到配置文件中
         </Paragraph>
@@ -125,12 +124,8 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
             }}>
   {`{
     "gitlab": {
-      "baseUrl": "https://gitlab.com",
-      "token": "glpat-xxxxxxxxxxxxxxxxxxxx"
-    },
-    "merge": {
-      "removeSourceBranch": false,
-      "squash": false
+      "baseUrl": "https://gitlab.seeyon.com",
+      "token": "xxxxxxxxxxxxxxxxxxxx"
     }
   }`}
             </pre>

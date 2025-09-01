@@ -107,7 +107,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
     <Option key={commit.id} value={commit.id}>
       <div style={{ padding: '4px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <BranchesOutlined style={{ color: '#722ed1', marginTop: 2 }} />
+          <BranchesOutlined style={{ color: '#722ed1', marginTop: 8 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ 
               fontWeight: 500,

@@ -106,48 +106,10 @@ const App: React.FC = () => {
           />
         ) : (
           <>
-            <div style={{ 
-              padding: '12px 16px 0 16px', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: 16 
-            }}>
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <Title level={4} style={{ margin: 0 }}>
-                  <MergeOutlined style={{ marginRight: 8, color: '#722ed1' }} />
-                  Fast Merge - GitLab 合并助手
-                </Title>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Button 
-                  icon={<SettingOutlined />}
-                  onClick={() => vscode.postMessage({ type: 'config:open' })}
-                  title="编辑 GitLab 配置文件"
-                  type="default"
-                  size="small"
-                  style={{ 
-                    borderColor: '#aaa', 
-                    color: '#aaa',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#aaa';
-                    e.currentTarget.style.color = '#666';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#aaa';
-                  }}
-                >
-                </Button>
-              </div>
-            </div>
             <MergePage />
           </>
         )}
       </Content>
-      <div style={{ textAlign: 'center', padding: 12, color: '#666' }}>使用过程中遇到任何问题或者建议，请联系王怀勇</div>
     </Layout>
   );
 };

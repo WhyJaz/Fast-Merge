@@ -37,11 +37,7 @@ export class GitLabService {
     if (!this.config) {
       // 如果没有完整配置，创建一个默认配置
       const defaultConfig: FastMergeConfig = {
-        gitlab: gitlabConfig,
-        merge: {
-          removeSourceBranch: false,
-          squash: false
-        }
+        gitlab: gitlabConfig
       };
       this.updateConfig(defaultConfig);
     } else {
@@ -140,11 +136,10 @@ export class GitLabService {
         options
       );
       
-      // 创建成功后等待2秒再检查冲突状态，让GitLab有时间计算
+      // 轮询检查合并状态，直到不再是checking状态
       try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        const updatedMR = await this.checkMergeRequestConflicts(projectId, response.data.iid);
-        console.log('DEBUG: 延时后检查结果:', {
+        const updatedMR = await this.waitForMergeStatusReady(projectId, response.data.iid);
+        console.log('DEBUG: 轮询检查完成:', {
           merge_status: updatedMR.merge_status,
           has_conflicts: (updatedMR as any).has_conflicts,
           title: updatedMR.title
@@ -209,6 +204,34 @@ export class GitLabService {
   }
 
   /**
+   * 轮询等待合并状态准备就绪（不再是checking状态）
+   */
+  async waitForMergeStatusReady(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
+    const maxAttempts = 30; // 最多尝试30次，避免无限循环
+    const intervalMs = 1000; // 每秒检查一次
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
+      
+      // 如果merge_status不是checking，说明状态已经确定，返回结果
+      if (mr.merge_status !== 'checking') {
+        console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mr.merge_status}`);
+        return mr;
+      }
+      
+      // 如果不是最后一次尝试，等待1秒后继续
+      if (attempt < maxAttempts) {
+        console.log(`DEBUG: 合并状态仍在检查中，第${attempt}次尝试，继续等待...`);
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+      }
+    }
+    
+    // 如果达到最大尝试次数仍然是checking状态，返回最后一次的结果
+    console.warn(`DEBUG: 达到最大尝试次数(${maxAttempts})，合并状态仍为checking`);
+    return await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
+  }
+
+  /**
    * 创建Cherry Pick合并请求
    */
   async createCherryPickMergeRequests(projectId: number, options: CherryPickOptions): Promise<CherryPickResult[]> {
@@ -217,9 +240,30 @@ export class GitLabService {
       const tempBranchName = `cherry-pick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${targetBranch}`;
       
       try {
-        // 直接基于要cherry-pick的commit创建分支
-        // 这样分支本身就包含了cherry-pick的内容，无需额外的cherry-pick操作
-        await this.createBranch(projectId, tempBranchName, options.commits[0]);
+        // 基于目标分支创建临时分支
+        await this.createBranch(projectId, tempBranchName, targetBranch);
+
+        // 并发执行所有commit的cherry-pick操作
+        const cherryPickPromises = options.commits.map(async (commitId) => {
+          try {
+            // 使用GitLab API的cherry-pick功能
+            return await this.httpClient.post(
+              `/projects/${projectId}/repository/commits/${commitId}/cherry_pick`,
+              { branch: tempBranchName }
+            );
+          } catch (cherryPickError: any) {
+            throw new Error(`Cherry-pick commit ${commitId} 失败: ${cherryPickError.message}`);
+          }
+        });
+
+        // 等待所有cherry-pick操作完成
+        try {
+          await Promise.all(cherryPickPromises);
+        } catch (cherryPickError: any) {
+          // 如果任何cherry-pick失败，清理临时分支并返回错误
+          await this.deleteBranch(projectId, tempBranchName);
+          throw cherryPickError;
+        }
 
         // 创建合并请求
         let title = '';
@@ -240,7 +284,6 @@ export class GitLabService {
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
         
         if (result.success && result.merge_request) {
-          // createMergeRequest 已经包含了冲突检测，直接返回结果
           return {
             target_branch: targetBranch,
             success: true,
@@ -260,7 +303,7 @@ export class GitLabService {
         try {
           await this.deleteBranch(projectId, tempBranchName);
         } catch (deleteError) {
-          // 忽略删除分支的错误，因为分支可能根本没有创建成功
+          // 忽略删除分支的错误
         }
 
         return {

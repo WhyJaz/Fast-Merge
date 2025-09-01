@@ -89,6 +89,11 @@ export const useGitLabApi = () => {
     sendRequest('gitlab:setConfiguration', config);
   }, [sendRequest]);
 
+  const clearState = useCallback(() => {
+    setResponses(new Map());
+    setLoading(new Map());
+  }, []);
+
   return {
     // API 状态获取
     getApiState,
@@ -101,7 +106,7 @@ export const useGitLabApi = () => {
     createCherryPickMR,
     getCurrentRepo,
     setConfiguration,
-
+    clearState,
     // 便捷的状态获取器
     projectsState: getApiState<GitLabProject[]>('gitlab:getProjects'),
     branchesState: getApiState<GitLabBranch[]>('gitlab:getBranches'),

@@ -5,10 +5,6 @@ import { GitLabConfiguration } from '../shared/gitlab-types';
 
 export interface FastMergeConfig {
   gitlab: GitLabConfiguration;
-  merge: {
-    removeSourceBranch: boolean;
-    squash: boolean;
-  };
 }
 
 export const DEFAULT_CONFIG: FastMergeConfig = {
@@ -16,10 +12,6 @@ export const DEFAULT_CONFIG: FastMergeConfig = {
     baseUrl: 'https://gitlab.com',
     token: '',
     projectId: undefined
-  },
-  merge: {
-    removeSourceBranch: false,
-    squash: false
   }
 };
 
@@ -123,10 +115,6 @@ export class ConfigManager {
       gitlab: {
         ...DEFAULT_CONFIG.gitlab,
         ...config.gitlab
-      },
-      merge: {
-        ...DEFAULT_CONFIG.merge,
-        ...config.merge
       }
     };
   }

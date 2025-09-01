@@ -1,7 +1,7 @@
 {
-	"name": "assistant",
+	"name": "fast-merge",
 	"displayName": "合并助手",
-	"description": "合并助手",
+	"description": "你的代码合并助手，大幅提升你的合并效率",
 	"version": "1.0.0",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
@@ -15,7 +15,7 @@
 		"name": "wanghuaiyong"
 	},
 	"license": "Apache-2.0",
-	"publisher": "assistant",
+	"publisher": "wanghuaiyong",
 	"repository": {
 		"type": "git",
 		"url": ""
@@ -23,11 +23,9 @@
 	"homepage": "",
 	"categories": [],
 	"keywords": [
-		"合并助手"
 	],
 	"activationEvents": [
-		"onStartupFinished"
-	],
+		"onStartupFinished" ],
 	"main": "./dist/extension.js",
 	"contributes": {
 		"viewsContainers": {
