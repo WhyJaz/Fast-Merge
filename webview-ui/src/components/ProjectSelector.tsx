@@ -22,38 +22,27 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 }) => {
   const { getProjects, projectsState } = useGitLabApi();
   const [searchText, setSearchText] = useState('');
-  const [page, setPage] = useState(1);
   const [allProjects, setAllProjects] = useState<GitLabProject[]>([]);
 
-  // 初始加载项目
+  // 初始加载项目 - 加载更多数据避免分页
   useEffect(() => {
-    getProjects('', 1, 50);
+    getProjects('', 1, 200);
   }, [getProjects]);
 
   // 处理项目数据更新
   useEffect(() => {
     if (projectsState.data && !projectsState.loading) {
-      if (page === 1) {
-        setAllProjects(projectsState.data);
-      } else {
-        setAllProjects(prev => [...prev, ...(projectsState.data || [])]);
-      }
+      setAllProjects(projectsState.data);
     }
-  }, [projectsState.data, projectsState.loading, page]);
+  }, [projectsState.data, projectsState.loading]);
 
-  // 搜索处理
+  // 搜索处理 - 从已加载数据中筛选，不重新调用接口
   const handleSearch = (value: string) => {
     setSearchText(value);
-    setPage(1);
-    setAllProjects([]);
-    getProjects(value, 1, 50);
+    // 不再重新调用接口，只更新搜索文本，让filteredProjects自动筛选
   };
 
-  // 加载更多
-  const handleLoadMore = () => {
-    setPage(prev => prev + 1);
-    getProjects(searchText, page + 1, 50);
-  };
+
 
   // 选择项目
   const handleSelect = (projectId: string) => {
@@ -73,21 +62,6 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   const dropdownRender = (menu: React.ReactElement) => (
     <div>
       {menu}
-      {filteredProjects.length > 0 && !projectsState.loading && (
-        <div style={{ padding: 8, borderTop: '1px solid #f0f0f0' }}>
-          <a 
-            onClick={handleLoadMore}
-            style={{ 
-              display: 'block', 
-              textAlign: 'center',
-              color: '#1890ff',
-              cursor: 'pointer'
-            }}
-          >
-            加载更多...
-          </a>
-        </div>
-      )}
     </div>
   );
 

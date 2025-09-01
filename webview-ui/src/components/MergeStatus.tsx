@@ -139,7 +139,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       key: 'mrUrl',
       render: (url: string, record: any) => url ? (
         <Space>
-          <Link href={url} target="_blank">
+          <Link href={url + '/diffs'} target="_blank">
             <LinkOutlined /> #{record.mrId}
           </Link>
           <Button 

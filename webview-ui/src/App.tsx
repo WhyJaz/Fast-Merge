@@ -110,7 +110,6 @@ const App: React.FC = () => {
           </>
         )}
       </Content>
-      <div style={{ textAlign: 'center', padding: 12, color: '#666' }}>使用过程中遇到任何问题或者建议，请联系王怀勇</div>
     </Layout>
   );
 };

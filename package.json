@@ -1,7 +1,7 @@
 {
 	"name": "assistant",
 	"displayName": "合并助手",
-	"description": "合并助手",
+	"description": "你的代码合并助手，大幅提升你的合并效率",
 	"version": "1.0.0",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
