@@ -69,9 +69,18 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
       if (a.default && !b.default) return -1;
       if (!a.default && b.default) return 1;
       
-      // 受保护分支其次
+      // 受保护分支中以test或hotfix开头的优先
       if (a.protected && !b.protected) return -1;
       if (!a.protected && b.protected) return 1;
+      
+      // 如果两个都是受保护分支，优先显示以test或hotfix开头的
+      if (a.protected && b.protected) {
+        const aIsTestOrHotfix = a.name.startsWith('test') || a.name.startsWith('hotfix');
+        const bIsTestOrHotfix = b.name.startsWith('test') || b.name.startsWith('hotfix');
+        
+        if (aIsTestOrHotfix && !bIsTestOrHotfix) return -1;
+        if (!aIsTestOrHotfix && bIsTestOrHotfix) return 1;
+      }
       
       // 字母顺序
       return a.name.localeCompare(b.name);
