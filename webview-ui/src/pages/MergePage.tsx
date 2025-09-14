@@ -300,23 +300,7 @@ export const MergePage: React.FC = () => {
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item 
-                label="MR标题" 
-                required
-                labelCol={{ flex: '0 0 auto' }}
-                wrapperCol={{ flex: '1 1 auto' }}
-              >
-                <Input
-                  value={mergeTitle}
-                  onChange={(e) => setMergeTitle(e.target.value)}
-                  placeholder="请输入合并请求标题"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+         
 
           {mergeType === 'branch' ? (
             <>
@@ -422,6 +406,23 @@ export const MergePage: React.FC = () => {
             </>
           )}
 
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item 
+                label="MR标题" 
+                required
+                labelCol={{ flex: '0 0 auto' }}
+                wrapperCol={{ flex: '1 1 auto' }}
+              >
+                <Input
+                  value={mergeTitle}
+                  onChange={(e) => setMergeTitle(e.target.value)}
+                  placeholder="请输入合并请求标题"
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item style={{ marginBottom: 0, textAlign: 'center' }}>
             <Button 
               type="primary" 

@@ -85,7 +85,7 @@ export class GitLabService {
    */
   async getBranches(projectId: number, search?: string): Promise<GitLabBranch[]> {
     const params: Record<string, string | number> = {
-      per_page: '100'
+      per_page: '200' // 增加获取的分支数量，确保包含更多保护分支
     };
 
     if (search) {
