@@ -128,19 +128,23 @@ export const MergePage: React.FC = () => {
     }
   }, [commitsState.data, mergeType, selectedCommit]);
 
-  // 设置默认MR标题
+  // 自动更新MR标题 - 当源分支或提交选择变化时
   useEffect(() => {
     if (commitsState.data && commitsState.data.length > 0) {
-      if (mergeType === 'branch' && !mergeTitle) {
-        // Branch模式默认使用最新commit的标题
+      if (mergeType === 'branch') {
+        // Branch模式：使用最新commit的标题
         setMergeTitle(commitsState.data[0].title);
-      } else if (mergeType === 'cherry-pick' && !mergeTitle) {
-        // Cherry-pick模式保留现有逻辑
-        const commit = commitsState.data[0];
-        setMergeTitle(`Cherry-pick: ${commit.title}`);
+      } else if (mergeType === 'cherry-pick') {
+        // Cherry-pick模式：根据选择的提交更新标题
+        if (selectedCommitDetail) {
+          setMergeTitle(`Cherry-pick: ${selectedCommitDetail.title}`);
+        } else {
+          // 如果没有选择具体提交，使用最新提交
+          setMergeTitle(`Cherry-pick: ${commitsState.data[0].title}`);
+        }
       }
     }
-  }, [commitsState.data, mergeType, mergeTitle]);
+  }, [commitsState.data, mergeType, selectedCommitDetail]);
 
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
@@ -160,6 +164,11 @@ export const MergePage: React.FC = () => {
     if (commitsState.data && id) {
       const detail = commitsState.data.find(commit => commit.id === id);
       setSelectedCommitDetail(detail || null);
+      
+      // 立即更新MR标题（仅cherry-pick模式）
+      if (mergeType === 'cherry-pick' && detail) {
+        setMergeTitle(`Cherry-pick: ${detail.title}`);
+      }
     } else {
       setSelectedCommitDetail(null);
     }
