@@ -10,7 +10,8 @@ import {
   MergeResult, 
   CherryPickResult,
   GitLabConfiguration,
-  ResponseMessage 
+  ResponseMessage,
+  GitLabMergeRequest 
 } from '../types/gitlab';
 
 interface ApiResponse<T> {
@@ -81,6 +82,10 @@ export const useGitLabApi = () => {
     sendRequest('gitlab:createCherryPickMR', { projectId, options });
   }, [sendRequest]);
 
+  const closeMergeRequest = useCallback((projectId: number, mergeRequestIid: number) => {
+    sendRequest('gitlab:closeMergeRequest', { projectId, mergeRequestIid });
+  }, [sendRequest]);
+
   const getCurrentRepo = useCallback(() => {
     sendRequest('gitlab:getCurrentRepo');
   }, [sendRequest]);
@@ -104,6 +109,7 @@ export const useGitLabApi = () => {
     getCommits,
     createMergeRequest,
     createCherryPickMR,
+    closeMergeRequest,
     getCurrentRepo,
     setConfiguration,
     clearState,
@@ -113,6 +119,7 @@ export const useGitLabApi = () => {
     commitsState: getApiState<GitLabCommit[]>('gitlab:getCommits'),
     mergeRequestState: getApiState<MergeResult>('gitlab:createMergeRequest'),
     cherryPickState: getApiState<CherryPickResult[]>('gitlab:createCherryPickMR'),
+    closeMergeRequestState: getApiState<GitLabMergeRequest>('gitlab:closeMergeRequest'),
     currentRepoState: getApiState<GitRepository>('gitlab:getCurrentRepo'),
     configurationState: getApiState<any>('gitlab:setConfiguration'),
   };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Typography, Space, Button, Tag, Table, message } from 'antd';
+import { Typography, Space, Button, Tag, Table, message, Popconfirm } from 'antd';
 import { 
   CheckCircleOutlined, 
   ExclamationCircleOutlined, 
@@ -7,8 +7,10 @@ import {
   BranchesOutlined,
   NodeIndexOutlined,
   CopyOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import { MergeResult, CherryPickResult } from '../types/gitlab';
+import { useGitLabApi } from '../hooks/useGitLabApi';
 
 const { Text, Link } = Typography;
 
@@ -23,6 +25,8 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   cherryPickResults,
   loading = false
 }) => {
+  const { closeMergeRequest, closeMergeRequestState } = useGitLabApi();
+
   // 复制MR链接到剪贴板
   const copyMRLink = async (url: string) => {
     try {
@@ -32,6 +36,12 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       message.error('复制失败，请手动复制');
     }
   };
+  
+  // 关闭MR
+  const handleCloseMR = async (projectId: number, mrIid: number) => {
+    closeMergeRequest(projectId, mrIid);
+  };
+  
   if (loading) {
     return (
       <div style={{ marginTop: 16, textAlign: 'center', padding: 20 }}>
@@ -70,6 +80,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         conflictStatus: hasConflicts ? '有冲突' : '无冲突',
         mrId: mergeResult.merge_request?.iid,
         mrUrl: mergeResult.merge_request?.web_url,
+        projectId: mergeResult.merge_request?.id ? mergeResult.merge_request.id : null,
         message: mergeResult.message || mergeResult.error
       });
     }
@@ -90,6 +101,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           conflictStatus: hasConflicts ? '有冲突' : '无冲突',
           mrId: result.merge_request?.iid,
           mrUrl: result.merge_request?.web_url,
+          projectId: result.merge_request?.id ? result.merge_request.id : null,
           message: result.message || result.error
         });
       });
@@ -149,6 +161,25 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             onClick={() => copyMRLink(url)}
             title="复制MR链接"
           />
+          {record.projectId && record.mrId && (
+            <Popconfirm
+              title="确认关闭MR"
+              description="确定要关闭这个合并请求吗？"
+              onConfirm={() => handleCloseMR(record.projectId, record.mrId)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<CloseOutlined />}
+                title="关闭MR"
+                loading={closeMergeRequestState.loading && 
+                         closeMergeRequestState.data && 
+                         (closeMergeRequestState.data as any).iid === record.mrId}
+              />
+            </Popconfirm>
+          )}
         </Space>
       ) : (
         <span style={{ color: '#999' }}>创建失败</span>
