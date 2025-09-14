@@ -267,7 +267,10 @@ export class GitLabService {
 
         // 创建合并请求
         let title = '';
-        if (options.commit_details && options.commit_details.length > 0) {
+        if (options.title) {
+          // 优先使用用户提供的完整标题
+          title = options.title;
+        } else if (options.commit_details && options.commit_details.length > 0) {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commit_details[0].title}`;
         } else {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;

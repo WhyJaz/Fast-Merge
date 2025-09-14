@@ -11,6 +11,7 @@ import {
   Card,
   Col,
   Form,
+  Input,
   Radio,
   Row,
   Space,
@@ -56,6 +57,7 @@ export const MergePage: React.FC = () => {
   const [targetBranches, setTargetBranches] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [mergeTitle, setMergeTitle] = useState<string>(''); // MR标题状态
 
   // 初始化，获取当前仓库信息
   useEffect(() => {
@@ -126,12 +128,27 @@ export const MergePage: React.FC = () => {
     }
   }, [commitsState.data, mergeType, selectedCommit]);
 
+  // 设置默认MR标题
+  useEffect(() => {
+    if (commitsState.data && commitsState.data.length > 0) {
+      if (mergeType === 'branch' && !mergeTitle) {
+        // Branch模式默认使用最新commit的标题
+        setMergeTitle(commitsState.data[0].title);
+      } else if (mergeType === 'cherry-pick' && !mergeTitle) {
+        // Cherry-pick模式保留现有逻辑
+        const commit = commitsState.data[0];
+        setMergeTitle(`Cherry-pick: ${commit.title}`);
+      }
+    }
+  }, [commitsState.data, mergeType, mergeTitle]);
+
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
     // 修复规则3：切换合并类型时清空提交和目标分支选择
     setSelectedCommit(undefined);
     setTargetBranches([]);
     setTargetBranch(undefined);
+    setMergeTitle(''); // 清空标题
   }, [mergeType]);
 
   // 处理commit选择变化
@@ -150,7 +167,6 @@ export const MergePage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
-    let mergeTitle = commitsState?.data?.[0]?.title || `Merge ${sourceBranch} into ${targetBranch}`;
     
     // 清除之前的结果，准备显示新的merge request结果
     clearState();
@@ -158,9 +174,8 @@ export const MergePage: React.FC = () => {
     setIsSubmitting(true);
 
     if (mergeType === 'branch') {
-      // 获取源分支最新commit用作标题
       const options: MergeRequestOptions = {
-        title: mergeTitle,
+        title: mergeTitle || `Merge ${sourceBranch} into ${targetBranch}`,
         description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
         source_branch: sourceBranch!,
         target_branch: targetBranch!,
@@ -173,7 +188,7 @@ export const MergePage: React.FC = () => {
       const options: CherryPickOptions = {
         commits: selectedCommit ? [selectedCommit] : [],
         target_branches: targetBranches,
-        title_prefix: 'Cherry-pick',
+        title: mergeTitle || 'Cherry-pick',
         description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
         commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
       };
@@ -281,6 +296,24 @@ export const MergePage: React.FC = () => {
                     </Space>
                   </Radio>
                 </Radio.Group>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item 
+                label="MR标题" 
+                required
+                labelCol={{ flex: '0 0 auto' }}
+                wrapperCol={{ flex: '1 1 auto' }}
+              >
+                <Input
+                  value={mergeTitle}
+                  onChange={(e) => setMergeTitle(e.target.value)}
+                  placeholder="请输入合并请求标题"
+                  style={{ width: '100%' }}
+                />
               </Form.Item>
             </Col>
           </Row>

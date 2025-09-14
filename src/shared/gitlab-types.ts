@@ -122,6 +122,7 @@ export interface CherryPickOptions {
   commits: string[];
   target_branches: string[];
   title_prefix?: string;
+  title?: string; // 添加完整标题字段
   description?: string;
   commit_details?: GitLabCommit[]; // 添加commit详细信息
 }
