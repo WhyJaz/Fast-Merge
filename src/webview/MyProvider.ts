@@ -204,6 +204,10 @@ class MyProvider implements vscode.WebviewViewProvider {
 					await this.handleCreateCherryPickMR(message.message)
 					break
 
+				case "gitlab:closeMergeRequest":
+					await this.handleCloseMergeRequest(message.message)
+					break
+
 				case "gitlab:getCurrentRepo":
 					await this.handleGetCurrentRepo()
 					break
@@ -300,6 +304,16 @@ class MyProvider implements vscode.WebviewViewProvider {
 			this.sendResponse('gitlab:createCherryPickMR', true, results)
 		} catch (error: any) {
 			this.sendResponse('gitlab:createCherryPickMR', false, null, error.message)
+		}
+	}
+
+	// 处理关闭合并请求
+	private async handleCloseMergeRequest(params: { projectId: number; mergeRequestIid: number }): Promise<void> {
+		try {
+			const result = await this.gitLabService.closeMergeRequest(params.projectId, params.mergeRequestIid)
+			this.sendResponse('gitlab:closeMergeRequest', true, result)
+		} catch (error: any) {
+			this.sendResponse('gitlab:closeMergeRequest', false, null, error.message)
 		}
 	}
 

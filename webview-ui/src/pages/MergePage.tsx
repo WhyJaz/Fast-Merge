@@ -454,6 +454,7 @@ export const MergePage: React.FC = () => {
           mergeResult={mergeRequestState.data || undefined}
           cherryPickResults={cherryPickState.data || undefined}
           loading={isSubmitting}
+          projectId={selectedProject?.id}
         />
       )}
     </div>

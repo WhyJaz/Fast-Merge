@@ -1,5 +1,5 @@
-import React from 'react';
-import { Typography, Space, Button, Tag, Table, message } from 'antd';
+import React, { useState } from 'react';
+import { Typography, Space, Button, Tag, Table, message, Popconfirm } from 'antd';
 import { 
   CheckCircleOutlined, 
   ExclamationCircleOutlined, 
@@ -7,8 +7,10 @@ import {
   BranchesOutlined,
   NodeIndexOutlined,
   CopyOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { MergeResult, CherryPickResult } from '../types/gitlab';
+import { useGitLabApi } from '../hooks/useGitLabApi';
 
 const { Text, Link } = Typography;
 
@@ -16,13 +18,19 @@ interface MergeStatusProps {
   mergeResult?: MergeResult;
   cherryPickResults?: CherryPickResult[];
   loading?: boolean;
+  projectId?: number;
 }
 
 export const MergeStatus: React.FC<MergeStatusProps> = ({
   mergeResult,
   cherryPickResults,
-  loading = false
+  loading = false,
+  projectId
 }) => {
+  const { closeMergeRequest, closeMergeRequestState } = useGitLabApi();
+  const [closingMrId, setClosingMrId] = useState<string | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState<string | null>(null);
+
   // 复制MR链接到剪贴板
   const copyMRLink = async (url: string) => {
     try {
@@ -32,6 +40,43 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       message.error('复制失败，请手动复制');
     }
   };
+
+  // 确认关闭MR
+  const confirmCloseMr = async (projectId: number, mergeRequestIid: number) => {
+    const mrKey = `${projectId}-${mergeRequestIid}`;
+    setClosingMrId(mrKey);
+    setConfirmVisible(null);
+    
+    try {
+      await closeMergeRequest(projectId, mergeRequestIid);
+    } catch (error) {
+      message.error('关闭MR请求发送失败');
+    }
+  };
+
+  // 取消关闭MR
+  const cancelCloseMr = () => {
+    setConfirmVisible(null);
+  };
+
+  // 显示确认弹窗
+  const showConfirm = (mrKey: string) => {
+    setConfirmVisible(mrKey);
+  };
+
+  // 监听关闭MR状态
+  React.useEffect(() => {
+    if (!closeMergeRequestState.loading && closingMrId) {
+      if (closeMergeRequestState.data) {
+        message.success('MR已成功关闭');
+        // 更新UI状态
+        setClosingMrId(null);
+      } else if (closeMergeRequestState.error) {
+        message.error(`关闭MR失败: ${closeMergeRequestState.error}`);
+        setClosingMrId(null);
+      }
+    }
+  }, [closeMergeRequestState, closingMrId]);
   if (loading) {
     return (
       <div style={{ marginTop: 16, textAlign: 'center', padding: 20 }}>
@@ -70,6 +115,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         conflictStatus: hasConflicts ? '有冲突' : '无冲突',
         mrId: mergeResult.merge_request?.iid,
         mrUrl: mergeResult.merge_request?.web_url,
+        projectId: projectId,
         message: mergeResult.message || mergeResult.error
       });
     }
@@ -90,6 +136,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           conflictStatus: hasConflicts ? '有冲突' : '无冲突',
           mrId: result.merge_request?.iid,
           mrUrl: result.merge_request?.web_url,
+          projectId: projectId,
           message: result.message || result.error
         });
       });
@@ -153,6 +200,34 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       ) : (
         <span style={{ color: '#999' }}>创建失败</span>
       )
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 120,
+      render: (_: any, record: any) => record.mrUrl && record.status === '成功' ? (
+        <Popconfirm
+          title="确认关闭合并请求"
+          description="确定要关闭这个合并请求吗？此操作不可撤销。"
+          onConfirm={() => confirmCloseMr(record.projectId || 0, record.mrId)}
+          onCancel={cancelCloseMr}
+          okText="确认关闭"
+          cancelText="取消"
+          okButtonProps={{ danger: true }}
+          open={confirmVisible === `${record.projectId || 0}-${record.mrId}`}
+        >
+          <Button 
+            type="link" 
+            size="small" 
+            icon={<CloseOutlined />}
+            onClick={() => showConfirm(`${record.projectId || 0}-${record.mrId}`)}
+            loading={closingMrId === `${record.projectId || 0}-${record.mrId}`}
+            danger
+          >
+            关闭
+          </Button>
+        </Popconfirm>
+      ) : null
     }
   ];
 
