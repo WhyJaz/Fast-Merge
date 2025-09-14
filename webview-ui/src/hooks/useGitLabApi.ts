@@ -81,10 +81,6 @@ export const useGitLabApi = () => {
     sendRequest('gitlab:createCherryPickMR', { projectId, options });
   }, [sendRequest]);
 
-  const closeMergeRequest = useCallback((projectId: number, mrIid: number) => {
-    return sendRequest('gitlab:closeMergeRequest', { projectId, mrIid });
-  }, [sendRequest]);
-
   const getCurrentRepo = useCallback(() => {
     sendRequest('gitlab:getCurrentRepo');
   }, [sendRequest]);
@@ -108,7 +104,6 @@ export const useGitLabApi = () => {
     getCommits,
     createMergeRequest,
     createCherryPickMR,
-    closeMergeRequest,
     getCurrentRepo,
     setConfiguration,
     clearState,

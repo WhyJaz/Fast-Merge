@@ -33,9 +33,9 @@ const { Text, Title } = Typography;
 type MergeType = 'branch' | 'cherry-pick';
 
 export const MergePage: React.FC = () => {
-  const {
-    getCurrentRepo,
-    createMergeRequest,
+  const { 
+    getCurrentRepo, 
+    createMergeRequest, 
     createCherryPickMR,
     getCommits,
     currentRepoState,
@@ -44,7 +44,7 @@ export const MergePage: React.FC = () => {
     commitsState,
     clearState
   } = useGitLabApi();
-
+  
   const { configInfo } = useConfig();
 
   // 状态管理
@@ -58,7 +58,6 @@ export const MergePage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [mergeTitle, setMergeTitle] = useState<string>(''); // MR标题状态
-  const [closedMRs, setClosedMRs] = useState<Set<number>>(new Set()); // 跟踪已关闭的MR
 
   // 初始化，获取当前仓库信息
   useEffect(() => {
@@ -156,20 +155,6 @@ export const MergePage: React.FC = () => {
     setMergeTitle(''); // 清空标题
   }, [mergeType]);
 
-  // 当合并请求状态变化时更新关闭状态
-  useEffect(() => {
-    if (mergeRequestState.data) {
-      const mrIid = mergeRequestState.data.merge_request?.iid;
-      // 只有当MR存在且未关闭时才更新状态
-      if (mrIid && !closedMRs.has(mrIid)) {
-        // 创建新的Set并添加新的MR ID
-        const newClosedMRs = new Set(closedMRs);
-        newClosedMRs.add(mrIid);
-        setClosedMRs(newClosedMRs);
-      }
-    }
-  }, [mergeRequestState.data]);
-
   // 处理commit选择变化
   const handleCommitChange = (commitId: string | string[] | undefined) => {
     const id = Array.isArray(commitId) ? commitId[0] : commitId;
@@ -221,22 +206,15 @@ export const MergePage: React.FC = () => {
     }
   };
 
-  // 处理MR关闭事件
-  const handleMergeRequestClosed = (mrIid: number) => {
-    // 更新状态以反映MR已关闭
-    const newClosedMRs = new Set(closedMRs);
-    newClosedMRs.add(mrIid);
-    setClosedMRs(newClosedMRs);
-  };
 
-  // 验证表单是否可以提交
+
   const canSubmit = () => {
     if (!selectedProject) return false;
     
     if (mergeType === 'branch') {
-      return !!sourceBranch && !!targetBranch && sourceBranch !== targetBranch;
+      return sourceBranch && targetBranch && sourceBranch !== targetBranch;
     } else {
-      return !!sourceBranch && !!selectedCommit && targetBranches.length > 0;
+      return selectedCommit && targetBranches.length > 0;
     }
   };
 
@@ -476,8 +454,6 @@ export const MergePage: React.FC = () => {
           mergeResult={mergeRequestState.data || undefined}
           cherryPickResults={cherryPickState.data || undefined}
           loading={isSubmitting}
-          onMergeRequestClosed={handleMergeRequestClosed} // 添加回调
-          closedMRs={closedMRs} // 传递closedMRs状态
         />
       )}
     </div>
