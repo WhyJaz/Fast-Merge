@@ -441,10 +441,15 @@ export class GitLabService {
    * 关闭合并请求
    */
   async closeMergeRequest(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
-    const response = await this.httpClient.put<GitLabMergeRequest>(
-      `/projects/${projectId}/merge_requests/${mergeRequestIid}`,
-      { state_event: 'close' }
-    );
-    return response.data;
+    try {
+      const response = await this.httpClient.put<GitLabMergeRequest>(
+        `/projects/${projectId}/merge_requests/${mergeRequestIid}`,
+        { state_event: 'close' }
+      );
+      return response.data;
+    } catch (error) {
+      // 抛出错误以便调用者处理
+      throw new Error(`关闭合并请求失败: ${error.message}`);
+    }
   }
 }
