@@ -73,6 +73,8 @@ export interface GitLabMergeRequest {
   description: string;
   state: 'opened' | 'closed' | 'merged';
   merge_status: 'can_be_merged' | 'cannot_be_merged' | 'checking';
+  detailed_merge_status?: 'mergeable' | 'conflict' | 'unchecked' | 'checking' | 'cannot_be_merged' | 'cannot_be_merged_recheck';
+  has_conflicts?: boolean;
   source_branch: string;
   target_branch: string;
   author: {

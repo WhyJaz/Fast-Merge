@@ -141,13 +141,21 @@ export class GitLabService {
         const updatedMR = await this.waitForMergeStatusReady(projectId, response.data.iid);
         console.log('DEBUG: 轮询检查完成:', {
           merge_status: updatedMR.merge_status,
-          has_conflicts: (updatedMR as any).has_conflicts,
+          detailed_merge_status: updatedMR.detailed_merge_status,
+          has_conflicts: updatedMR.has_conflicts,
           title: updatedMR.title
         });
+        
+        // 根据详细状态确定是否有冲突
+        const hasConflicts = updatedMR.detailed_merge_status === 'conflict' || 
+                            updatedMR.merge_status === 'cannot_be_merged' ||
+                            updatedMR.has_conflicts === true;
+        
+        const messagePrefix = hasConflicts ? '合并请求已创建但存在冲突: ' : '合并请求已创建: ';
         return {
           success: true,
           merge_request: updatedMR,
-          message: `合并请求已创建: ${updatedMR.title}`
+          message: `${messagePrefix}${updatedMR.title}`
         };
       } catch (checkError) {
         console.error('DEBUG: 冲突检查失败:', checkError);
@@ -213,9 +221,11 @@ export class GitLabService {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
       
-      // 如果merge_status不是checking，说明状态已经确定，返回结果
-      if (mr.merge_status !== 'checking') {
-        console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mr.merge_status}`);
+      // 如果detailed_merge_status存在且不是checking，说明状态已经确定，返回结果
+      // 否则回退到使用merge_status进行检查
+      const mergeStatus = mr.detailed_merge_status || mr.merge_status;
+      if (mergeStatus !== 'checking' && mergeStatus !== 'unchecked') {
+        console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mergeStatus}`);
         return mr;
       }
       
