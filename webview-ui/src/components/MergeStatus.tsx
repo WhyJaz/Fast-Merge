@@ -233,7 +233,6 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       ) : null
     }
   ];
-
   const tableData = getTableData();
   const successCount = tableData.filter(item => item.status === '成功').length;
   const failureCount = tableData.length - successCount;

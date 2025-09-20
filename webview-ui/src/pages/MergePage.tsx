@@ -16,7 +16,8 @@ import {
   Row,
   Space,
   Tag,
-  Typography
+  Typography,
+  message
 } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { BranchSelector } from '../components/BranchSelector';
@@ -26,7 +27,8 @@ import { ProjectSelector } from '../components/ProjectSelector';
 import { useConfig } from '../hooks/useConfig';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 import { CherryPickOptions, GitLabCommit, GitLabProject, MergeRequestOptions } from '../types/gitlab';
-import { vscode } from '../utils/vscode';
+import { vscode,  } from '../utils/vscode';
+import { includeHotfix } from '../utils/tool';
 
 const { Text, Title } = Typography;
 
@@ -145,10 +147,10 @@ export const MergePage: React.FC = () => {
       } else if (mergeType === 'cherry-pick') {
         // Cherry-pick模式：根据选择的提交更新标题
         if (selectedCommitDetail) {
-          setMergeTitle(`Cherry-pick: ${selectedCommitDetail.title}`);
+          setMergeTitle(selectedCommitDetail.title);
         } else {
           // 如果没有选择具体提交，使用最新提交
-          setMergeTitle(`Cherry-pick: ${commitsState.data[0].title}`);
+          setMergeTitle(commitsState.data[0].title);
         }
       }
     }
@@ -175,7 +177,7 @@ export const MergePage: React.FC = () => {
       
       // 立即更新MR标题（仅cherry-pick模式）
       if (mergeType === 'cherry-pick' && detail) {
-        setMergeTitle(`Cherry-pick: ${detail.title}`);
+        setMergeTitle(detail.title);
       }
     } else {
       setSelectedCommitDetail(null);
@@ -184,34 +186,39 @@ export const MergePage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
-    
+    const branchOptions : MergeRequestOptions = {
+      title: mergeTitle || `Merge ${sourceBranch} into ${targetBranch}`,
+      description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
+      source_branch: sourceBranch!,
+      target_branch: targetBranch!,
+      remove_source_branch: false,
+      squash: false
+    };
+    const cherryPickOptions: CherryPickOptions = {
+      commits: selectedCommit ? [selectedCommit] : [],
+      target_branches: targetBranches,
+      title: mergeTitle || 'Cherry-pick',
+      description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
+      commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
+    };
+    let options = null
+    let mrFunc = null
+    if (mergeType === 'branch') {
+      options = branchOptions
+      mrFunc = createMergeRequest
+    } else {
+      options = cherryPickOptions
+      mrFunc = createCherryPickMR
+    }
+    if (includeHotfix(options, mergeType)) {
+      message.error('目标分支包含hotfix分支，mr标题或者commit应该包含v8-开头的bug号')
+      return
+    }
+    mrFunc(selectedProject.id, options as any);
     // 清除之前的结果，准备显示新的merge request结果
     clearState();
     setShowResults(false);
     setIsSubmitting(true);
-
-    if (mergeType === 'branch') {
-      const options: MergeRequestOptions = {
-        title: mergeTitle || `Merge ${sourceBranch} into ${targetBranch}`,
-        description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
-        source_branch: sourceBranch!,
-        target_branch: targetBranch!,
-        remove_source_branch: false,
-        squash: false
-      };
-      
-      createMergeRequest(selectedProject.id, options);
-    } else {
-      const options: CherryPickOptions = {
-        commits: selectedCommit ? [selectedCommit] : [],
-        target_branches: targetBranches,
-        title: mergeTitle || 'Cherry-pick',
-        description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
-        commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
-      };
-      
-      createCherryPickMR(selectedProject.id, options);
-    }
   };
 
 
