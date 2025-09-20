@@ -49,11 +49,13 @@ export const MergePage: React.FC = () => {
 
   // 状态管理
   const [selectedProject, setSelectedProject] = useState<GitLabProject>();
-  const [mergeType, setMergeType] = useState<MergeType>('branch');
+  const [mergeType, setMergeType] = useState<MergeType>('cherry-pick');
   const [sourceBranch, setSourceBranch] = useState<string>();
+  // 分支合并模式的目标分支
   const [targetBranch, setTargetBranch] = useState<string>();
   const [selectedCommit, setSelectedCommit] = useState<string | undefined>(undefined);
   const [selectedCommitDetail, setSelectedCommitDetail] = useState<GitLabCommit | null>(null); // 存储完整的commit信息
+  // cherry-pick合并模式的目标分支
   const [targetBranches, setTargetBranches] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -62,13 +64,18 @@ export const MergePage: React.FC = () => {
   // 初始化，获取当前仓库信息
   useEffect(() => {
     getCurrentRepo();
-  }, [getCurrentRepo]);
+  }, []);
 
   // 处理当前仓库信息 - 移除源分支默认值设置
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
-      const repoInfo = currentRepoState.data;
       // 不再自动设置源分支为当前分支，让用户手动选择
+      const repoInfo = currentRepoState.data || {};
+      const {currentBranch } = repoInfo;
+      // setTimeout(() => {
+        // setSourceBranch(currentBranch)
+      // }, 100)
+      // setSelectedProject({...repoInfo, needInit: true} as any)
     }
   }, [currentRepoState]);
 
