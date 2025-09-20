@@ -25,12 +25,64 @@ export const useGitLabApi = () => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const message = event.data as ResponseMessage;
+      const message = event.data as any;
       if (message.type === 'response') {
         const { requestType, success, data, error } = message.message;
         
         setResponses(prev => new Map(prev.set(requestType, { success, data, error })));
         setLoading(prev => new Map(prev.set(requestType, false)));
+      } else if (message.type === 'gitlab:conflictStatusUpdate') {
+        // 处理冲突状态更新消息
+        const { projectId, mergeRequestIid, mergeRequest } = message;
+        
+        // 更新对应的MR状态
+        setResponses(prev => {
+          const newMap = new Map(prev);
+          const mergeRequestKey = 'gitlab:createMergeRequest';
+          const cherryPickKey = 'gitlab:createCherryPickMR';
+          
+          // 更新普通MR
+          const mergeRequestData = newMap.get(mergeRequestKey);
+          if (mergeRequestData?.success && mergeRequestData.data?.merge_request?.iid === mergeRequestIid) {
+            const updatedData = {
+              ...mergeRequestData,
+              data: {
+                ...mergeRequestData.data,
+                merge_request: {
+                  ...mergeRequestData.data.merge_request,
+                  ...mergeRequest,
+                  conflictCheckStatus: 'completed'
+                }
+              }
+            };
+            newMap.set(mergeRequestKey, updatedData);
+          }
+          
+          // 更新Cherry Pick MR
+          const cherryPickData = newMap.get(cherryPickKey);
+          if (cherryPickData?.success && Array.isArray(cherryPickData.data)) {
+            const updatedCherryPickData = cherryPickData.data.map((result: any) => {
+              if (result.merge_request?.iid === mergeRequestIid) {
+                return {
+                  ...result,
+                  merge_request: {
+                    ...result.merge_request,
+                    ...mergeRequest,
+                    conflictCheckStatus: 'completed'
+                  }
+                };
+              }
+              return result;
+            });
+            
+            newMap.set(cherryPickKey, {
+              ...cherryPickData,
+              data: updatedCherryPickData
+            });
+          }
+          
+          return newMap;
+        });
       }
     };
     window.addEventListener('message', handleMessage);

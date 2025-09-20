@@ -8,9 +8,12 @@ import {
   NodeIndexOutlined,
   CopyOutlined,
   CloseOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { MergeResult, CherryPickResult } from '../types/gitlab';
 import { useGitLabApi } from '../hooks/useGitLabApi';
+
+// 移除自定义CSS动画，使用Antd内置的LoadingOutlined图标
 
 const { Text, Link } = Typography;
 
@@ -102,19 +105,39 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     
     // 处理普通合并请求结果
     if (mergeResult) {
-      const hasConflicts = (mergeResult.merge_request as any)?.has_conflicts === true || 
-                        mergeResult.merge_request?.merge_status === 'cannot_be_merged';
+      const mr = mergeResult.merge_request as any;
+      const isConflictCheckCompleted = mr?.conflictCheckStatus === 'completed';
+      const hasConflicts = isConflictCheckCompleted ? 
+        (mr?.detailed_merge_status === 'conflict' || 
+         mr?.merge_status === 'cannot_be_merged' ||
+         mr?.detailed_merge_status === 'cannot_be_merged') : 
+        null; // 如果还没校验完成，显示为null
+      
+      // 添加调试日志
+      if (isConflictCheckCompleted) {
+        console.log('DEBUG: 冲突状态判断', {
+          iid: mr?.iid,
+          title: mr?.title,
+          merge_status: mr?.merge_status,
+          detailed_merge_status: mr?.detailed_merge_status,
+          has_conflicts: mr?.has_conflicts,
+          hasConflicts: hasConflicts
+        });
+      }
       
       data.push({
         key: 'merge-result',
         type: 'Branch Merge',
-        sourceBranch: mergeResult.merge_request?.source_branch || '-',
-        targetBranch: mergeResult.merge_request?.target_branch || '-',
-        title: mergeResult.merge_request?.title || '-',
+        sourceBranch: mr?.source_branch || '-',
+        targetBranch: mr?.target_branch || '-',
+        title: mr?.title || '-',
         status: mergeResult.success ? '成功' : '失败',
-        conflictStatus: hasConflicts ? '有冲突' : '无冲突',
-        mrId: mergeResult.merge_request?.iid,
-        mrUrl: mergeResult.merge_request?.web_url,
+        conflictStatus: isConflictCheckCompleted ? 
+          (hasConflicts ? '有冲突' : '无冲突') : 
+          '校验中',
+        isConflictChecking: !isConflictCheckCompleted,
+        mrId: mr?.iid,
+        mrUrl: mr?.web_url,
         projectId: projectId,
         message: mergeResult.message || mergeResult.error
       });
@@ -123,19 +146,27 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     // 处理Cherry Pick结果
     if (cherryPickResults && cherryPickResults.length > 0) {
       cherryPickResults.forEach((result, index) => {
-        const hasConflicts = (result.merge_request as any)?.has_conflicts === true || 
-                          result.merge_request?.merge_status === 'cannot_be_merged';
+        const mr = result.merge_request as any;
+        const isConflictCheckCompleted = mr?.conflictCheckStatus === 'completed';
+        const hasConflicts = isConflictCheckCompleted ? 
+          (mr?.detailed_merge_status === 'conflict' || 
+           mr?.merge_status === 'cannot_be_merged' ||
+           mr?.detailed_merge_status === 'cannot_be_merged') : 
+          null;
         
         data.push({
           key: `cherry-pick-${index}`,
           type: 'Cherry Pick',
           sourceBranch: '-',
           targetBranch: result.target_branch,
-          title: result.merge_request?.title || '-',
+          title: mr?.title || '-',
           status: result.success ? '成功' : '失败',
-          conflictStatus: hasConflicts ? '有冲突' : '无冲突',
-          mrId: result.merge_request?.iid,
-          mrUrl: result.merge_request?.web_url,
+          conflictStatus: isConflictCheckCompleted ? 
+            (hasConflicts ? '有冲突' : '无冲突') : 
+            '校验中',
+          isConflictChecking: !isConflictCheckCompleted,
+          mrId: mr?.iid,
+          mrUrl: mr?.web_url,
           projectId: projectId,
           message: result.message || result.error
         });
@@ -176,7 +207,16 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       render: (status: string, record: any) => {
         if (!record.mrUrl) return <span style={{ color: '#999' }}>-</span>;
         
-        if (status === '有冲突') {
+        if (record.isConflictChecking) {
+          return (
+            <Space>
+              <Tag color="processing">
+                <LoadingOutlined style={{ marginRight: 4 }} spin />
+                校验中
+              </Tag>
+            </Space>
+          );
+        } else if (status === '有冲突') {
           return <Tag color="error">有冲突</Tag>;
         } else {
           return <Tag color="success">无冲突</Tag>;

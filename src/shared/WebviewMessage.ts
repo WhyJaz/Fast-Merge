@@ -7,7 +7,7 @@ export interface WebviewMessage {
 
 // GitLab 相关消息类型
 export interface GitLabMessage extends WebviewMessage {
-	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration'
+	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate'
 }
 
 // 配置相关消息类型
@@ -75,6 +75,14 @@ export interface SetConfigurationMessage extends GitLabMessage {
 	message: GitLabConfiguration
 }
 
+// 冲突状态更新消息
+export interface ConflictStatusUpdateMessage extends GitLabMessage {
+	type: 'gitlab:conflictStatusUpdate'
+	projectId: number
+	mergeRequestIid: number
+	mergeRequest: any
+}
+
 // 响应消息类型
 export interface ResponseMessage extends WebviewMessage {
 	type: 'response'
@@ -95,5 +103,6 @@ export type AllWebviewMessages =
 	| CreateCherryPickMRMessage 
 	| GetCurrentRepoMessage
 	| SetConfigurationMessage
+	| ConflictStatusUpdateMessage
 	| ConfigMessage
 	| ResponseMessage;

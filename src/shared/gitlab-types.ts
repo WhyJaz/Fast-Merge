@@ -18,6 +18,9 @@ export interface GitLabProject {
     kind: string;
     full_path: string;
   };
+  // 添加扩展属性用于前端使用
+  needInit?: boolean;
+  gitlabProjectPath?: string;
 }
 
 export interface GitLabBranch {
@@ -90,6 +93,8 @@ export interface GitLabMergeRequest {
   merged_at?: string;
   closed_at?: string;
   merge_commit_sha?: string;
+  // 添加冲突校验状态
+  conflictCheckStatus?: 'checking' | 'completed' | 'failed';
 }
 
 export interface GitLabUser {

@@ -28,7 +28,7 @@ import { useConfig } from '../hooks/useConfig';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 import { CherryPickOptions, GitLabCommit, GitLabProject, MergeRequestOptions } from '../types/gitlab';
 import { vscode,  } from '../utils/vscode';
-import { includeHotfix } from '../utils/tool';
+import { validateMr } from '../utils/tool';
 
 const { Text, Title } = Typography;
 
@@ -210,7 +210,7 @@ export const MergePage: React.FC = () => {
       options = cherryPickOptions
       mrFunc = createCherryPickMR
     }
-    if (includeHotfix(options, mergeType)) {
+    if (!validateMr(options, mergeType)) {
       message.error('目标分支包含hotfix分支，mr标题或者commit应该包含v8-开头的bug号')
       return
     }
