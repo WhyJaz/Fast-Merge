@@ -33,7 +33,6 @@ export const useGitLabApi = () => {
         setLoading(prev => new Map(prev.set(requestType, false)));
       }
     };
-
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
@@ -60,35 +59,42 @@ export const useGitLabApi = () => {
     };
   }, [responses, loading]);
 
-  // API 方法
+  // 获取git工程信息
   const getProjects = useCallback((search?: string, page?: number, perPage?: number) => {
     sendRequest('gitlab:getProjects', { search, page, perPage });
   }, [sendRequest]);
 
+  // 获取分支信息
   const getBranches = useCallback((projectId: number, search?: string) => {
     sendRequest('gitlab:getBranches', { projectId, search });
   }, [sendRequest]);
 
+  // 获取commit信息
   const getCommits = useCallback((projectId: number, branch: string, search?: string, page?: number, perPage?: number) => {
     sendRequest('gitlab:getCommits', { projectId, branch, search, page, perPage });
   }, [sendRequest]);
 
+  // 创建merge request
   const createMergeRequest = useCallback((projectId: number, options: MergeRequestOptions) => {
     sendRequest('gitlab:createMergeRequest', { projectId, options });
   }, [sendRequest]);
 
+  // 创建一个cherry pick merge request
   const createCherryPickMR = useCallback((projectId: number, options: CherryPickOptions) => {
     sendRequest('gitlab:createCherryPickMR', { projectId, options });
   }, [sendRequest]);
 
+  // 关闭合并请求
   const closeMergeRequest = useCallback((projectId: number, mergeRequestIid: number) => {
     sendRequest('gitlab:closeMergeRequest', { projectId, mergeRequestIid });
   }, [sendRequest]);
 
+  // 获取当前工作区仓库信息
   const getCurrentRepo = useCallback(() => {
     sendRequest('gitlab:getCurrentRepo');
   }, [sendRequest]);
 
+  // 设置gitlab配置
   const setConfiguration = useCallback((config: GitLabConfiguration) => {
     sendRequest('gitlab:setConfiguration', config);
   }, [sendRequest]);

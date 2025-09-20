@@ -66,18 +66,19 @@ export const MergePage: React.FC = () => {
     getCurrentRepo();
   }, []);
 
-  // 处理当前仓库信息 - 移除源分支默认值设置
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
       // 不再自动设置源分支为当前分支，让用户手动选择
       const repoInfo = currentRepoState.data || {};
       const {currentBranch } = repoInfo;
-      // setTimeout(() => {
-        // setSourceBranch(currentBranch)
-      // }, 100)
-      // setSelectedProject({...repoInfo, needInit: true} as any)
+      if (!sourceBranch) { 
+        setTimeout(() => {
+          setSourceBranch(currentBranch)
+        }, 1000)
+      }
+      setSelectedProject({...repoInfo, needInit: true} as any)
     }
-  }, [currentRepoState]);
+  }, [currentRepoState.data, currentRepoState.loading]);
 
   // 监听合并请求状态
   useEffect(() => {

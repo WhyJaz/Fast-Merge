@@ -323,7 +323,7 @@ export class GitLabService {
           target_branch: targetBranch,
           success: false,
           error: error.message || 'Cherry-pick 操作失败',
-          message: `Cherry-pick 到分支 ${targetBranch} 失败: ${error.message || '未知错误'}`
+          message: `${error.message || '未知错误'}`
         };
       }
     };

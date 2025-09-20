@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Typography, Space, Button, Tag, Table, message, Popconfirm } from 'antd';
+import { Typography, Space, Button, Tag, Table, message, Popconfirm, Tooltip } from 'antd';
 import { 
   CheckCircleOutlined, 
   ExclamationCircleOutlined, 
@@ -159,9 +159,12 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             {branch}
           </Tag>
           {record.status === '失败' && (
-            <Tag color="error">
-              失败
-            </Tag>
+            <Tooltip title={record.message || '操作失败'} placement="top">
+              <Tag color="error" style={{ cursor: 'help' }}>
+                <ExclamationCircleOutlined style={{ marginRight: 4, color: '#ff4d4f' }} />
+                <span style={{ color: '#ff4d4f' }}>失败</span>
+              </Tag>
+            </Tooltip>
           )}
         </Space>
       )
@@ -234,7 +237,6 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   const tableData = getTableData();
   const successCount = tableData.filter(item => item.status === '成功').length;
   const failureCount = tableData.length - successCount;
-
   return (
     <div style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
