@@ -33,6 +33,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   const { closeMergeRequest, closeMergeRequestState } = useGitLabApi();
   const [closingMrId, setClosingMrId] = useState<string | null>(null);
   const [confirmVisible, setConfirmVisible] = useState<string | null>(null);
+  const [closedMrIds, setClosedMrIds] = useState<Set<string>>(new Set());
 
   // 复制MR链接到剪贴板
   const copyMRLink = async (url: string) => {
@@ -72,6 +73,8 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     if (!closeMergeRequestState.loading && closingMrId) {
       if (closeMergeRequestState.data) {
         message.success('MR已成功关闭');
+        // 将MR标记为已关闭
+        setClosedMrIds(prev => new Set(prev).add(closingMrId));
         // 更新UI状态
         setClosingMrId(null);
       } else if (closeMergeRequestState.error) {
@@ -248,29 +251,52 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       title: '操作',
       key: 'action',
       width: 120,
-      render: (_: any, record: any) => record.mrUrl && record.status === '成功' ? (
-        <Popconfirm
-          title="确认关闭合并请求"
-          description="确定要关闭这个合并请求吗？此操作不可撤销。"
-          onConfirm={() => confirmCloseMr(record.projectId || 0, record.mrId)}
-          onCancel={cancelCloseMr}
-          okText="确认关闭"
-          cancelText="取消"
-          okButtonProps={{ danger: true }}
-          open={confirmVisible === `${record.projectId || 0}-${record.mrId}`}
-        >
-          <Button 
-            type="link" 
-            size="small" 
-            icon={<CloseOutlined />}
-            onClick={() => showConfirm(`${record.projectId || 0}-${record.mrId}`)}
-            loading={closingMrId === `${record.projectId || 0}-${record.mrId}`}
-            danger
+      render: (_: any, record: any) => {
+        const mrKey = `${record.projectId || 0}-${record.mrId}`;
+        const isClosed = closedMrIds.has(mrKey);
+        const isClosing = closingMrId === mrKey;
+        
+        if (!record.mrUrl || record.status !== '成功') {
+          return null;
+        }
+        
+        if (isClosed) {
+          return (
+            <Button 
+              type="text" 
+              size="small" 
+              disabled
+              style={{ color: '#999' }}
+            >
+              已关闭
+            </Button>
+          );
+        }
+        
+        return (
+          <Popconfirm
+            title="确认关闭合并请求"
+            description="确定要关闭这个合并请求吗？此操作不可撤销。"
+            onConfirm={() => confirmCloseMr(record.projectId || 0, record.mrId)}
+            onCancel={cancelCloseMr}
+            okText="确认关闭"
+            cancelText="取消"
+            okButtonProps={{ danger: true }}
+            open={confirmVisible === mrKey}
           >
-            关闭
-          </Button>
-        </Popconfirm>
-      ) : null
+            <Button 
+              type="link" 
+              size="small" 
+              icon={<CloseOutlined />}
+              onClick={() => showConfirm(mrKey)}
+              loading={isClosing}
+              danger
+            >
+              关闭
+            </Button>
+          </Popconfirm>
+        );
+      }
     }
   ];
   const tableData = getTableData();

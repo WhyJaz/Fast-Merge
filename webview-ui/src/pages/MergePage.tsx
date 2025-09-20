@@ -3,7 +3,8 @@ import {
   LinkOutlined,
   MergeOutlined,
   NodeIndexOutlined,
-  SettingOutlined
+  SettingOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import {
   Alert,
@@ -181,6 +182,17 @@ export const MergePage: React.FC = () => {
       }
     } else {
       setSelectedCommitDetail(null);
+    }
+  };
+
+  // 刷新提交列表
+  const handleRefreshCommits = () => {
+    if (selectedProject && sourceBranch) {
+      // 清空当前选择
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
+      // 重新获取提交列表
+      getCommits(selectedProject.id, sourceBranch, '', 1, 1);
     }
   };
 
@@ -390,14 +402,39 @@ export const MergePage: React.FC = () => {
                     labelCol={{ flex: '0 0 auto' }}
                     wrapperCol={{ flex: '1 1 auto' }}
                   >
-                    <CommitSelector
-                      projectId={selectedProject?.id}
-                      branch={sourceBranch}
-                      value={selectedCommit}
-                      onChange={handleCommitChange}
-                      placeholder="选择要cherry-pick的提交"
-                      multiple={false}
-                    />
+                    <div style={{ display: 'flex', width: 'auto' }}>
+                      <div style={{ flex: 1, marginRight: 8 }}>
+                        <CommitSelector
+                          projectId={selectedProject?.id}
+                          branch={sourceBranch}
+                          value={selectedCommit}
+                          onChange={handleCommitChange}
+                          placeholder="选择要cherry-pick的提交"
+                          multiple={false}
+                        />
+                      </div>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={handleRefreshCommits}
+                        disabled={!selectedProject || !sourceBranch || commitsState.loading}
+                        loading={commitsState.loading}
+                        title="刷新提交列表"
+                        type="text"
+                        style={{
+                          color: 'var(--vscode-foreground)',
+                          border: '1px solid var(--vscode-input-border)',
+                          backgroundColor: 'var(--vscode-input-background)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)';
+                          e.currentTarget.style.color = 'var(--vscode-foreground)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--vscode-input-background)';
+                          e.currentTarget.style.color = 'var(--vscode-foreground)';
+                        }}
+                      />
+                    </div>
                   </Form.Item>
                 </Col>
               </Row>
