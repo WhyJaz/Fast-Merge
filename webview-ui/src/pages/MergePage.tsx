@@ -57,11 +57,11 @@ export const MergePage: React.FC = () => {
   const [mergeType, setMergeType] = useState<MergeType>('cherry-pick');
   const [sourceBranch, setSourceBranch] = useState<string>();
   // 分支合并模式的目标分支
-  const [targetBranch, setTargetBranch] = useState<string>();
+  const [targetBranch, setTargetBranch] = useState<string>('test');
   const [selectedCommit, setSelectedCommit] = useState<string | undefined>(undefined);
   const [selectedCommitDetail, setSelectedCommitDetail] = useState<GitLabCommit | null>(null); // 存储完整的commit信息
   // cherry-pick合并模式的目标分支
-  const [targetBranches, setTargetBranches] = useState<string[]>([]);
+  const [targetBranches, setTargetBranches] = useState<string[]>(['test']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [mergeTitle, setMergeTitle] = useState<string>(''); // MR标题状态
@@ -110,10 +110,10 @@ export const MergePage: React.FC = () => {
     if (selectedProject) {
       // 项目变化时重置所有分支和提交选择
       setSourceBranch(undefined); // 修复：添加清空源分支选择
-      setTargetBranch(undefined);
+      setTargetBranch('test');
       setSelectedCommit(undefined);
       setSelectedCommitDetail(null);
-      setTargetBranches([]);
+      setTargetBranches(['test']);
       setMergeTitle('');
     }
   }, [selectedProject]);
@@ -130,7 +130,7 @@ export const MergePage: React.FC = () => {
       // 自动获取该分支的最新提交并选中第一个
       fetchCommits()
     }
-  }, [sourceBranch, mergeType]);
+  }, [sourceBranch]);
 
   // 监听提交数据，自动选择最新的提交（仅在cherry-pick模式且当前没有选择时）
   useEffect(() => {
@@ -168,8 +168,8 @@ export const MergePage: React.FC = () => {
   useEffect(() => {
     // 修复规则3：切换合并类型时清空提交和目标分支选择
     setSelectedCommit(undefined);
-    setTargetBranches([]);
-    setTargetBranch(undefined);
+    setTargetBranches(['test']);
+    setTargetBranch('test');
   }, [mergeType]);
 
   // 处理commit选择变化
@@ -322,16 +322,16 @@ export const MergePage: React.FC = () => {
                   value={mergeType} 
                   onChange={(e) => setMergeType(e.target.value)}
                 >
-                  <Radio value="branch">
-                    <Space>
-                      <BranchesOutlined />
-                      Branch Merge
-                    </Space>
-                  </Radio>
                   <Radio value="cherry-pick">
                     <Space>
                       <NodeIndexOutlined />
                       Cherry Pick
+                    </Space>
+                  </Radio>
+                  <Radio value="branch">
+                    <Space>
+                      <BranchesOutlined />
+                      Branch Merge
                     </Space>
                   </Radio>
                 </Radio.Group>
@@ -405,8 +405,8 @@ export const MergePage: React.FC = () => {
                     labelCol={{ flex: '0 0 auto' }}
                     wrapperCol={{ flex: '1 1 auto' }}
                   >
-                    <div style={{ display: 'flex', width: 'auto' }}>
-                      <div style={{ flex: 1, marginRight: 8 }}>
+                    <div style={{ display: 'flex', width: '100%', maxWidth: '100%' }}>
+                      <div style={{ flex: '1 1 0', minWidth: 0, marginRight: 8 }}>
                         <CommitSelector
                           projectId={selectedProject?.id}
                           branch={sourceBranch}
