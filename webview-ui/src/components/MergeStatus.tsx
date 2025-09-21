@@ -250,7 +250,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 80,
       render: (_: any, record: any) => {
         const mrKey = `${record.projectId || 0}-${record.mrId}`;
         const isClosed = closedMrIds.has(mrKey);

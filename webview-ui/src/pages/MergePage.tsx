@@ -20,7 +20,7 @@ import {
   Typography,
   message
 } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { BranchSelector } from '../components/BranchSelector';
 import { CommitSelector } from '../components/CommitSelector';
 import { MergeStatus } from '../components/MergeStatus';
@@ -34,6 +34,8 @@ import { validateMr } from '../utils/tool';
 const { Text, Title } = Typography;
 
 type MergeType = 'branch' | 'cherry-pick';
+const globalState = {
+}
 
 export const MergePage: React.FC = () => {
   const { 
@@ -69,21 +71,23 @@ export const MergePage: React.FC = () => {
     getCurrentRepo();
   }, []);
 
+  const projectName = useMemo(() => {
+    return selectedProject?.path_with_namespace
+  }, [selectedProject?.path_with_namespace])
+
   // 从工作区git信息，初始设置源分支和当前项目
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
       const repoInfo = currentRepoState.data || {};
       const {currentBranch } = repoInfo;
-      if (!sourceBranch && selectedProject?.id) { 
+      if (!sourceBranch && projectName === repoInfo.gitlabProjectPath) { 
         setTimeout(() => {
           setSourceBranch(currentBranch)
         }, 1000)
       }
-      if (!selectedProject?.id) {
-        setSelectedProject({...repoInfo, needInit: true} as any)
-      }
+      !projectName && setSelectedProject({...repoInfo, needInit: true} as any)
     }
-  }, [currentRepoState.data, currentRepoState.loading, selectedProject]);
+  }, [currentRepoState.data, currentRepoState.loading, projectName]);
 
   // 监听合并请求状态
   useEffect(() => {
@@ -114,36 +118,36 @@ export const MergePage: React.FC = () => {
     }
   }, [selectedProject]);
 
+  const fetchCommits = () => {
+    getCommits(selectedProject?.id, sourceBranch, '', 1, 1);
+  }
+
   // 当源分支变化
   useEffect(() => {
-    if (selectedProject && sourceBranch) {
-      // 当源分支变化且为cherry-pick模式时，清空提交选择并自动获取最新提交
-      if ( mergeType === 'cherry-pick') {
-        // 修复：先清空之前选择的提交
-        setSelectedCommit(undefined);
-        setSelectedCommitDetail(null);
-      }
+    if (sourceBranch) {
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
       // 自动获取该分支的最新提交并选中第一个
-      getCommits(selectedProject.id, sourceBranch, '', 1, 1);
+      fetchCommits()
     }
-  }, [selectedProject, sourceBranch, mergeType, getCommits]);
+  }, [sourceBranch, mergeType]);
 
   // 监听提交数据，自动选择最新的提交（仅在cherry-pick模式且当前没有选择时）
   useEffect(() => {
     if (
-      mergeType === 'cherry-pick' && 
+      sourceBranch &&
       commitsState.data && 
-      commitsState.data.length > 0 && 
-      !selectedCommit
+      commitsState.data.length > 0
     ) {
       // 自动选择最近的提交
       setSelectedCommit(commitsState.data[0].id);
       setSelectedCommitDetail(commitsState.data[0]);
     }
-  }, [commitsState.data, mergeType, selectedCommit]);
+  }, [commitsState.data, sourceBranch]);
 
   // 自动更新MR标题 - 当源分支或提交选择变化时
   useEffect(() => {
+    if (!sourceBranch) return;
     if (commitsState.data && commitsState.data.length > 0) {
       if (mergeType === 'branch') {
         // Branch模式：使用最新commit的标题
@@ -158,7 +162,7 @@ export const MergePage: React.FC = () => {
         }
       }
     }
-  }, [commitsState.data, mergeType, selectedCommitDetail]);
+  }, [commitsState.data, mergeType, selectedCommitDetail, sourceBranch]);
 
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
