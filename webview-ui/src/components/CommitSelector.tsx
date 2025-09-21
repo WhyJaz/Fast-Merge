@@ -89,20 +89,6 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
     );
   }, [allCommits, searchText]);
 
-  // 格式化日期
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return '今天';
-    if (diffDays === 1) return '昨天';
-    if (diffDays < 7) return `${diffDays}天前`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
-    return date.toLocaleDateString();
-  };
-
   const renderCommitOption = (commit: GitLabCommit) => (
     <Option key={commit.id} value={commit.id}>
       <div style={{ padding: '4px 0' }}>
@@ -116,38 +102,11 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
               whiteSpace: 'nowrap',
               marginBottom: 2
             }}>
+              {/* <Tag color="green" style={{ margin: 0, fontSize: '11px' }}>
+                {commit.short_id}
+              </Tag> */}
               {commit.title}
             </div>
-            {/* <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <Tag color="purple" style={{ margin: 0, fontSize: '11px' }}>
-                {commit.short_id}
-              </Tag>
-              <Text type="secondary" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <UserOutlined />
-                {commit.author_name}
-              </Text>
-              <Text type="secondary" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <CalendarOutlined />
-                {formatDate(commit.authored_date)}
-              </Text>
-            </div> */}
-            {/* {commit.message !== commit.title && (
-              <Tooltip title={commit.message}>
-                <Text 
-                  type="secondary" 
-                  style={{ 
-                    fontSize: '12px',
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap',
-                    display: 'block',
-                    opacity: 0.7
-                  }}
-                >
-                  {commit.message}
-                </Text>
-              </Tooltip>
-            )} */}
           </div>
         </div>
       </div>

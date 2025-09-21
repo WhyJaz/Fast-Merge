@@ -29,6 +29,13 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
     getProjects('', 1, 200);
   }, [getProjects]);
 
+  useEffect(() => {
+    if (value?.needInit && allProjects.length) {
+      const findProject = allProjects?.find(project => project.path_with_namespace === value.gitlabProjectPath) || {};
+      onChange?.({...findProject, needInit: false} as any);
+    } 
+  }, [value, allProjects]);
+
   // 处理项目数据更新
   useEffect(() => {
     if (projectsState.data && !projectsState.loading) {
@@ -64,6 +71,15 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
       {menu}
     </div>
   );
+
+  const getName = (data: any) => {
+    if (data.name_with_namespace.includes('front')) {
+      return '前端-' +  data.name
+    } else if (data.name_with_namespace.includes('back')) {
+      return '后端-' +  data.name
+    }
+    return data.name
+  }
 
   return (
     <Select
@@ -103,7 +119,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
                 textOverflow: 'ellipsis', 
                 whiteSpace: 'nowrap' 
               }}>
-                {project.name}
+                {getName(project)}
               </div>
               {/* <Text 
                 type="secondary" 

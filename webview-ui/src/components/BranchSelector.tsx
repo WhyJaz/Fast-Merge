@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Select, Spin, Empty, Tag, Typography } from 'antd';
-import { BranchesOutlined, LockOutlined, CrownOutlined } from '@ant-design/icons';
+import { BranchesOutlined, SafetyOutlined, CrownOutlined } from '@ant-design/icons';
 import { GitLabBranch } from '../types/gitlab';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 
@@ -61,6 +61,30 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
     );
   }, [branchesState.data, searchText]);
 
+  // 版本号比较函数
+  const compareVersions = (versionA: string, versionB: string): number => {
+    const partsA = versionA.split('.').map(part => parseInt(part, 10) || 0);
+    const partsB = versionB.split('.').map(part => parseInt(part, 10) || 0);
+    
+    const maxLength = Math.max(partsA.length, partsB.length);
+    
+    for (let i = 0; i < maxLength; i++) {
+      const partA = partsA[i] || 0;
+      const partB = partsB[i] || 0;
+      
+      if (partA > partB) return -1; // 降序排列，大版本在前
+      if (partA < partB) return 1;
+    }
+    
+    return 0;
+  };
+
+  // 提取hotfix版本号
+  const extractHotfixVersion = (branchName: string): string | null => {
+    const hotfixMatch = branchName.match(/^hotfix\/([^-]+)/);
+    return hotfixMatch ? hotfixMatch[1] : null;
+  };
+
   // 按重要性排序分支
   const sortedBranches = useMemo(() => {
     const branches = [...filteredBranches];
@@ -69,18 +93,27 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
       if (a.default && !b.default) return -1;
       if (!a.default && b.default) return 1;
       
-      // 受保护分支中以test或hotfix开头的优先
+      // 保护分支且以test或hotfix开头的排在最前面
+      const aIsProtectedTestHotfix = a.protected && (a.name.startsWith('test') || a.name.startsWith('hotfix'));
+      const bIsProtectedTestHotfix = b.protected && (b.name.startsWith('test') || b.name.startsWith('hotfix'));
+      
+      if (aIsProtectedTestHotfix && !bIsProtectedTestHotfix) return -1;
+      if (!aIsProtectedTestHotfix && bIsProtectedTestHotfix) return 1;
+      
+      // 如果都是hotfix分支，按版本号排序
+      if (aIsProtectedTestHotfix && bIsProtectedTestHotfix && 
+          a.name.startsWith('hotfix') && b.name.startsWith('hotfix')) {
+        const versionA = extractHotfixVersion(a.name);
+        const versionB = extractHotfixVersion(b.name);
+        
+        if (versionA && versionB) {
+          return compareVersions(versionA, versionB);
+        }
+      }
+      
+      // 其他保护分支其次
       if (a.protected && !b.protected) return -1;
       if (!a.protected && b.protected) return 1;
-      
-      // 如果两个都是受保护分支，优先显示以test或hotfix开头的
-      if (a.protected && b.protected) {
-        const aIsTestOrHotfix = a.name.startsWith('test') || a.name.startsWith('hotfix');
-        const bIsTestOrHotfix = b.name.startsWith('test') || b.name.startsWith('hotfix');
-        
-        if (aIsTestOrHotfix && !bIsTestOrHotfix) return -1;
-        if (!aIsTestOrHotfix && bIsTestOrHotfix) return 1;
-      }
       
       // 字母顺序
       return a.name.localeCompare(b.name);
@@ -97,36 +130,18 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
               fontWeight: branch.default ? 600 : 400,
               overflow: 'hidden', 
               textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap' 
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6
             }}>
+              {branch.protected && (
+                <SafetyOutlined style={{ color: 'orange', fontSize: '12px' }} />
+              )}
               {branch.name}
             </div>
-            {/* <Text 
-              type="secondary" 
-              style={{ 
-                fontSize: '12px',
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap',
-                display: 'block'
-              }}
-            >
-              {branch.commit.title}
-            </Text> */}
           </div>
         </div>
-        {/* <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-          {branch.default && (
-            <Tag icon={<CrownOutlined />} color="gold">
-              默认
-            </Tag>
-          )}
-          {branch.protected && (
-            <Tag icon={<LockOutlined />} color="red">
-              保护
-            </Tag>
-          )}
-        </div> */}
       </div>
     </Option>
   );

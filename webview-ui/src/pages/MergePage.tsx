@@ -3,7 +3,8 @@ import {
   LinkOutlined,
   MergeOutlined,
   NodeIndexOutlined,
-  SettingOutlined
+  SettingOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import {
   Alert,
@@ -16,9 +17,10 @@ import {
   Row,
   Space,
   Tag,
-  Typography
+  Typography,
+  message
 } from 'antd';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { BranchSelector } from '../components/BranchSelector';
 import { CommitSelector } from '../components/CommitSelector';
 import { MergeStatus } from '../components/MergeStatus';
@@ -26,11 +28,14 @@ import { ProjectSelector } from '../components/ProjectSelector';
 import { useConfig } from '../hooks/useConfig';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 import { CherryPickOptions, GitLabCommit, GitLabProject, MergeRequestOptions } from '../types/gitlab';
-import { vscode } from '../utils/vscode';
+import { vscode,  } from '../utils/vscode';
+import { validateMr } from '../utils/tool';
 
 const { Text, Title } = Typography;
 
 type MergeType = 'branch' | 'cherry-pick';
+const globalState = {
+}
 
 export const MergePage: React.FC = () => {
   const { 
@@ -49,12 +54,14 @@ export const MergePage: React.FC = () => {
 
   // 状态管理
   const [selectedProject, setSelectedProject] = useState<GitLabProject>();
-  const [mergeType, setMergeType] = useState<MergeType>('branch');
+  const [mergeType, setMergeType] = useState<MergeType>('cherry-pick');
   const [sourceBranch, setSourceBranch] = useState<string>();
-  const [targetBranch, setTargetBranch] = useState<string>();
+  // 分支合并模式的目标分支
+  const [targetBranch, setTargetBranch] = useState<string>('test');
   const [selectedCommit, setSelectedCommit] = useState<string | undefined>(undefined);
   const [selectedCommitDetail, setSelectedCommitDetail] = useState<GitLabCommit | null>(null); // 存储完整的commit信息
-  const [targetBranches, setTargetBranches] = useState<string[]>([]);
+  // cherry-pick合并模式的目标分支
+  const [targetBranches, setTargetBranches] = useState<string[]>(['test']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [mergeTitle, setMergeTitle] = useState<string>(''); // MR标题状态
@@ -62,15 +69,25 @@ export const MergePage: React.FC = () => {
   // 初始化，获取当前仓库信息
   useEffect(() => {
     getCurrentRepo();
-  }, [getCurrentRepo]);
+  }, []);
 
-  // 处理当前仓库信息 - 移除源分支默认值设置
+  const projectName = useMemo(() => {
+    return selectedProject?.path_with_namespace
+  }, [selectedProject?.path_with_namespace])
+
+  // 从工作区git信息，初始设置源分支和当前项目
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
-      const repoInfo = currentRepoState.data;
-      // 不再自动设置源分支为当前分支，让用户手动选择
+      const repoInfo = currentRepoState.data || {};
+      const {currentBranch } = repoInfo;
+      if (!sourceBranch && projectName === repoInfo.gitlabProjectPath) { 
+        setTimeout(() => {
+          setSourceBranch(currentBranch)
+        }, 1000)
+      }
+      !projectName && setSelectedProject({...repoInfo, needInit: true} as any)
     }
-  }, [currentRepoState]);
+  }, [currentRepoState.data, currentRepoState.loading, projectName]);
 
   // 监听合并请求状态
   useEffect(() => {
@@ -93,74 +110,67 @@ export const MergePage: React.FC = () => {
     if (selectedProject) {
       // 项目变化时重置所有分支和提交选择
       setSourceBranch(undefined); // 修复：添加清空源分支选择
-      setTargetBranch(undefined);
+      setTargetBranch('test');
       setSelectedCommit(undefined);
       setSelectedCommitDetail(null);
-      setTargetBranches([]);
+      setTargetBranches(['test']);
       setMergeTitle('');
     }
   }, [selectedProject]);
 
+  const fetchCommits = () => {
+    getCommits(selectedProject?.id, sourceBranch, '', 1, 1);
+  }
+
   // 当源分支变化
   useEffect(() => {
-    if (selectedProject && sourceBranch) {
-      // 当源分支变化且为cherry-pick模式时，清空提交选择并自动获取最新提交
-      if ( mergeType === 'cherry-pick') {
-        // 修复：先清空之前选择的提交
-        setSelectedCommit(undefined);
-        setSelectedCommitDetail(null);
-      }
+    if (sourceBranch) {
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
       // 自动获取该分支的最新提交并选中第一个
-      getCommits(selectedProject.id, sourceBranch, '', 1, 1);
+      fetchCommits()
     }
-  }, [selectedProject, sourceBranch, mergeType, getCommits]);
+  }, [sourceBranch]);
 
   // 监听提交数据，自动选择最新的提交（仅在cherry-pick模式且当前没有选择时）
-  // 同时设置默认MR标题
   useEffect(() => {
     if (
-      mergeType === 'cherry-pick' && 
+      sourceBranch &&
       commitsState.data && 
-      commitsState.data.length > 0 && 
-      !selectedCommit
+      commitsState.data.length > 0
     ) {
       // 自动选择最近的提交
       setSelectedCommit(commitsState.data[0].id);
       setSelectedCommitDetail(commitsState.data[0]);
     }
-    
-    // 设置默认标题
+  }, [commitsState.data, sourceBranch]);
+
+  // 自动更新MR标题 - 当源分支或提交选择变化时
+  useEffect(() => {
+    if (!sourceBranch) return;
     if (commitsState.data && commitsState.data.length > 0) {
-      if (mergeType === 'branch' && !mergeTitle) {
-        // Branch模式默认使用最新commit的标题
+      if (mergeType === 'branch') {
+        // Branch模式：使用最新commit的标题
         setMergeTitle(commitsState.data[0].title);
-      } else if (mergeType === 'cherry-pick' && !mergeTitle) {
-        // Cherry-pick模式保留现有逻辑
-        const commit = commitsState.data[0];
-        setMergeTitle(`Cherry-pick: ${commit.title}`);
+      } else if (mergeType === 'cherry-pick') {
+        // Cherry-pick模式：根据选择的提交更新标题
+        if (selectedCommitDetail) {
+          setMergeTitle(selectedCommitDetail.title);
+        } else {
+          // 如果没有选择具体提交，使用最新提交
+          setMergeTitle(commitsState.data[0].title);
+        }
       }
     }
-  }, [commitsState.data, mergeType, selectedCommit, mergeTitle]);
+  }, [commitsState.data, mergeType, selectedCommitDetail, sourceBranch]);
 
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
     // 修复规则3：切换合并类型时清空提交和目标分支选择
     setSelectedCommit(undefined);
-    setTargetBranches([]);
-    setTargetBranch(undefined);
-    
-    // 重新设置标题
-    if (commitsState.data && commitsState.data.length > 0) {
-      if (mergeType === 'branch') {
-        setMergeTitle(commitsState.data[0].title);
-      } else {
-        const commit = commitsState.data[0];
-        setMergeTitle(`Cherry-pick: ${commit.title}`);
-      }
-    } else {
-      setMergeTitle('');
-    }
-  }, [mergeType, commitsState.data]);
+    setTargetBranches(['test']);
+    setTargetBranch('test');
+  }, [mergeType]);
 
   // 处理commit选择变化
   const handleCommitChange = (commitId: string | string[] | undefined) => {
@@ -171,47 +181,59 @@ export const MergePage: React.FC = () => {
     if (commitsState.data && id) {
       const detail = commitsState.data.find(commit => commit.id === id);
       setSelectedCommitDetail(detail || null);
-      
-      // 更新标题
-      if (detail && mergeType === 'cherry-pick') {
-        setMergeTitle(`Cherry-pick: ${detail.title}`);
-      }
+      setMergeTitle(detail?.title || '');
     } else {
       setSelectedCommitDetail(null);
+      setMergeTitle('');
+    }
+  };
+
+  // 刷新提交列表
+  const handleRefreshCommits = () => {
+    if (selectedProject && sourceBranch) {
+      // 清空当前选择
+      setSelectedCommit(undefined);
+      setSelectedCommitDetail(null);
+      // 重新获取提交列表
+      getCommits(selectedProject.id, sourceBranch, '', 1, 1);
     }
   };
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
-    
+    const branchOptions : MergeRequestOptions = {
+      title: mergeTitle || `Merge ${sourceBranch} into ${targetBranch}`,
+      description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
+      source_branch: sourceBranch!,
+      target_branch: targetBranch!,
+      remove_source_branch: false,
+      squash: false
+    };
+    const cherryPickOptions: CherryPickOptions = {
+      commits: selectedCommit ? [selectedCommit] : [],
+      target_branches: targetBranches,
+      title: mergeTitle || 'Cherry-pick',
+      description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
+      commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
+    };
+    let options = null
+    let mrFunc = null
+    if (mergeType === 'branch') {
+      options = branchOptions
+      mrFunc = createMergeRequest
+    } else {
+      options = cherryPickOptions
+      mrFunc = createCherryPickMR
+    }
+    if (!validateMr(options, mergeType)) {
+      message.error('目标分支包含hotfix分支，mr标题或者commit应该包含v8-开头的bug号')
+      return
+    }
+    mrFunc(selectedProject.id, options as any);
     // 清除之前的结果，准备显示新的merge request结果
     clearState();
     setShowResults(false);
     setIsSubmitting(true);
-
-    if (mergeType === 'branch') {
-      // 获取源分支最新commit用作标题
-      const options: MergeRequestOptions = {
-        title: mergeTitle || commitsState?.data?.[0]?.title || `Merge ${sourceBranch} into ${targetBranch}`,
-        description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
-        source_branch: sourceBranch!,
-        target_branch: targetBranch!,
-        remove_source_branch: false,
-        squash: false
-      };
-      
-      createMergeRequest(selectedProject.id, options);
-    } else {
-      const options: CherryPickOptions = {
-        commits: selectedCommit ? [selectedCommit] : [],
-        target_branches: targetBranches,
-        title_prefix: 'Cherry-pick',
-        description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
-        commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
-      };
-      
-      createCherryPickMR(selectedProject.id, options);
-    }
   };
 
 
@@ -300,16 +322,16 @@ export const MergePage: React.FC = () => {
                   value={mergeType} 
                   onChange={(e) => setMergeType(e.target.value)}
                 >
-                  <Radio value="branch">
-                    <Space>
-                      <BranchesOutlined />
-                      Branch Merge
-                    </Space>
-                  </Radio>
                   <Radio value="cherry-pick">
                     <Space>
                       <NodeIndexOutlined />
                       Cherry Pick
+                    </Space>
+                  </Radio>
+                  <Radio value="branch">
+                    <Space>
+                      <BranchesOutlined />
+                      Branch Merge
                     </Space>
                   </Radio>
                 </Radio.Group>
@@ -317,7 +339,8 @@ export const MergePage: React.FC = () => {
             </Col>
           </Row>
 
-          
+         
+
           {mergeType === 'branch' ? (
             <>
               <Row gutter={16}>
@@ -374,7 +397,6 @@ export const MergePage: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item 
@@ -383,17 +405,42 @@ export const MergePage: React.FC = () => {
                     labelCol={{ flex: '0 0 auto' }}
                     wrapperCol={{ flex: '1 1 auto' }}
                   >
-                    <CommitSelector
-                      projectId={selectedProject?.id}
-                      branch={sourceBranch}
-                      value={selectedCommit}
-                      onChange={handleCommitChange}
-                      placeholder="可输入搜索commit ID或信息，以选择要cherry-pick的提交"
-                    />
+                    <div style={{ display: 'flex', width: '100%', maxWidth: '100%' }}>
+                      <div style={{ flex: '1 1 0', minWidth: 0, marginRight: 8 }}>
+                        <CommitSelector
+                          projectId={selectedProject?.id}
+                          branch={sourceBranch}
+                          value={selectedCommit}
+                          onChange={handleCommitChange}
+                          placeholder="选择要cherry-pick的提交"
+                          multiple={false}
+                        />
+                      </div>
+                      <Button
+                        icon={<ReloadOutlined />}
+                        onClick={handleRefreshCommits}
+                        disabled={!selectedProject || !sourceBranch || commitsState.loading}
+                        loading={commitsState.loading}
+                        title="刷新提交列表"
+                        type="text"
+                        style={{
+                          color: 'var(--vscode-foreground)',
+                          border: '1px solid var(--vscode-input-border)',
+                          backgroundColor: 'var(--vscode-input-background)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)';
+                          e.currentTarget.style.color = 'var(--vscode-foreground)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--vscode-input-background)';
+                          e.currentTarget.style.color = 'var(--vscode-foreground)';
+                        }}
+                      />
+                    </div>
                   </Form.Item>
                 </Col>
               </Row>
-
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item 
@@ -423,11 +470,10 @@ export const MergePage: React.FC = () => {
             </>
           )}
 
-          {/* MR标题输入框 */}
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item
-                label="MR标题"
+              <Form.Item 
+                label="MR标题" 
                 required
                 labelCol={{ flex: '0 0 auto' }}
                 wrapperCol={{ flex: '1 1 auto' }}
@@ -436,12 +482,11 @@ export const MergePage: React.FC = () => {
                   value={mergeTitle}
                   onChange={(e) => setMergeTitle(e.target.value)}
                   placeholder="请输入合并请求标题"
+                  style={{ width: '100%' }}
                 />
               </Form.Item>
             </Col>
           </Row>
-
-
           <Form.Item style={{ marginBottom: 0, textAlign: 'center' }}>
             <Button 
               type="primary" 
@@ -464,6 +509,7 @@ export const MergePage: React.FC = () => {
           mergeResult={mergeRequestState.data || undefined}
           cherryPickResults={cherryPickState.data || undefined}
           loading={isSubmitting}
+          projectId={selectedProject?.id}
         />
       )}
     </div>

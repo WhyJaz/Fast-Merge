@@ -18,3 +18,5 @@
 **wanghuaiyong**
 
 欢迎提供宝贵意见和反馈，也欢迎加入此项目一起开发，完善插件
+
+项目地址：https://github.com/WhyJaz/Fast-Merge
