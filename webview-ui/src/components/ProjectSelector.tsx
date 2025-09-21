@@ -31,7 +31,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 
   useEffect(() => {
     if (value?.needInit && allProjects.length) {
-      const findProject = allProjects.find(project => project.path_with_namespace === value.gitlabProjectPath);
+      const findProject = allProjects?.find(project => project.path_with_namespace === value.gitlabProjectPath) || {};
       onChange?.({...findProject, needInit: false} as any);
     } 
   }, [value, allProjects]);

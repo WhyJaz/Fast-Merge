@@ -69,19 +69,21 @@ export const MergePage: React.FC = () => {
     getCurrentRepo();
   }, []);
 
+  // 从工作区git信息，初始设置源分支和当前项目
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
-      // 不再自动设置源分支为当前分支，让用户手动选择
       const repoInfo = currentRepoState.data || {};
       const {currentBranch } = repoInfo;
-      if (!sourceBranch) { 
+      if (!sourceBranch && selectedProject?.id) { 
         setTimeout(() => {
           setSourceBranch(currentBranch)
         }, 1000)
       }
-      setSelectedProject({...repoInfo, needInit: true} as any)
+      if (!selectedProject?.id) {
+        setSelectedProject({...repoInfo, needInit: true} as any)
+      }
     }
-  }, [currentRepoState.data, currentRepoState.loading]);
+  }, [currentRepoState.data, currentRepoState.loading, selectedProject]);
 
   // 监听合并请求状态
   useEffect(() => {
@@ -108,6 +110,7 @@ export const MergePage: React.FC = () => {
       setSelectedCommit(undefined);
       setSelectedCommitDetail(null);
       setTargetBranches([]);
+      setMergeTitle('');
     }
   }, [selectedProject]);
 
@@ -163,7 +166,6 @@ export const MergePage: React.FC = () => {
     setSelectedCommit(undefined);
     setTargetBranches([]);
     setTargetBranch(undefined);
-    setMergeTitle(''); // 清空标题
   }, [mergeType]);
 
   // 处理commit选择变化
@@ -175,13 +177,10 @@ export const MergePage: React.FC = () => {
     if (commitsState.data && id) {
       const detail = commitsState.data.find(commit => commit.id === id);
       setSelectedCommitDetail(detail || null);
-      
-      // 立即更新MR标题（仅cherry-pick模式）
-      if (mergeType === 'cherry-pick' && detail) {
-        setMergeTitle(detail.title);
-      }
+      setMergeTitle(detail?.title || '');
     } else {
       setSelectedCommitDetail(null);
+      setMergeTitle('');
     }
   };
 
