@@ -232,7 +232,8 @@ export const MergePage: React.FC = () => {
     }
     mrFunc(selectedProject.id, options as any);
     // 清除之前的结果，准备显示新的merge request结果
-    clearState();
+    clearState('gitlab:createMergeRequest');
+    clearState('gitlab:createCherryPickMR');
     setShowResults(false);
     setIsSubmitting(true);
   };

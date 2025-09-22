@@ -151,9 +151,23 @@ export const useGitLabApi = () => {
     sendRequest('gitlab:setConfiguration', config);
   }, [sendRequest]);
 
-  const clearState = useCallback(() => {
-    setResponses(new Map());
-    setLoading(new Map());
+  const clearState = useCallback((type?: string) => {
+    if (type) {
+      // 只清除指定类型的数据
+      setResponses(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(type);
+        return newMap;
+      setLoading(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(type);
+        return newMap;
+      });
+    } else {
+      // 清除所有数据
+      setResponses(new Map());
+      setLoading(new Map());
+    }
   }, []);
 
   return {
