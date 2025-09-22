@@ -339,9 +339,21 @@ class MyProvider implements vscode.WebviewViewProvider {
 	}
 
 	// 处理关闭合并请求
-	private async handleCloseMergeRequest(params: { projectId: number; mergeRequestIid: number }): Promise<void> {
+	private async handleCloseMergeRequest(params: { projectId: number; mergeRequestIid: number; tempBranchName?: string }): Promise<void> {
 		try {
 			const result = await this.gitLabService.closeMergeRequest(params.projectId, params.mergeRequestIid)
+			
+			// 如果提供了临时分支名称，尝试删除临时分支
+			if (params.tempBranchName) {
+				try {
+					await this.gitLabService.deleteBranch(params.projectId, params.tempBranchName)
+					console.log(`成功删除临时分支: ${params.tempBranchName}`)
+				} catch (deleteError: any) {
+					console.warn(`删除临时分支失败: ${params.tempBranchName}`, deleteError.message)
+					// 不抛出错误，因为关闭MR已经成功，删除分支失败不应该影响整体操作
+				}
+			}
+			
 			this.sendResponse('gitlab:closeMergeRequest', true, result)
 		} catch (error: any) {
 			this.sendResponse('gitlab:closeMergeRequest', false, null, error.message)

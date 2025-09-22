@@ -387,12 +387,14 @@ export class GitLabService {
             target_branch: targetBranch,
             success: true,
             merge_request: result.merge_request,
+            temp_branch_name: tempBranchName, // 保存临时分支名称
             message: `成功创建 Cherry-pick 合并请求到分支 ${targetBranch}`
           };
         } else {
           return {
             target_branch: targetBranch,
             success: false,
+            temp_branch_name: tempBranchName, // 即使失败也保存临时分支名称，用于清理
             error: result.error,
             message: result.message || `创建 Cherry-pick 合并请求失败`
           };
@@ -408,6 +410,7 @@ export class GitLabService {
         return {
           target_branch: targetBranch,
           success: false,
+          temp_branch_name: tempBranchName, // 保存临时分支名称用于清理
           error: error.message || 'Cherry-pick 操作失败',
           message: `${error.message || '未知错误'}`
         };

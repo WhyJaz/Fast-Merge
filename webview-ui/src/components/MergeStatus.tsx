@@ -46,13 +46,13 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   };
 
   // 确认关闭MR
-  const confirmCloseMr = async (projectId: number, mergeRequestIid: number) => {
+  const confirmCloseMr = async (projectId: number, mergeRequestIid: number, tempBranchName?: string) => {
     const mrKey = `${projectId}-${mergeRequestIid}`;
     setClosingMrId(mrKey);
     setConfirmVisible(null);
     
     try {
-      await closeMergeRequest(projectId, mergeRequestIid);
+      await closeMergeRequest(projectId, mergeRequestIid, tempBranchName);
     } catch (error) {
       message.error('关闭MR请求发送失败');
     }
@@ -142,6 +142,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         mrId: mr?.iid,
         mrUrl: mr?.web_url,
         projectId: projectId,
+        tempBranchName: undefined, // 普通合并请求没有临时分支
         message: mergeResult.message || mergeResult.error
       });
     }
@@ -171,6 +172,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           mrId: mr?.iid,
           mrUrl: mr?.web_url,
           projectId: projectId,
+          tempBranchName: result.temp_branch_name, // 包含临时分支名称
           message: result.message || result.error
         });
       });
@@ -277,7 +279,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           <Popconfirm
             title="确认关闭合并请求"
             description="确定要关闭这个合并请求吗？此操作不可撤销。"
-            onConfirm={() => confirmCloseMr(record.projectId || 0, record.mrId)}
+            onConfirm={() => confirmCloseMr(record.projectId || 0, record.mrId, record.tempBranchName)}
             onCancel={cancelCloseMr}
             okText="确认关闭"
             cancelText="取消"

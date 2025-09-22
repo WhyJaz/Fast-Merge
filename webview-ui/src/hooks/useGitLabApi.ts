@@ -137,8 +137,8 @@ export const useGitLabApi = () => {
   }, [sendRequest]);
 
   // 关闭合并请求
-  const closeMergeRequest = useCallback((projectId: number, mergeRequestIid: number) => {
-    sendRequest('gitlab:closeMergeRequest', { projectId, mergeRequestIid });
+  const closeMergeRequest = useCallback((projectId: number, mergeRequestIid: number, tempBranchName?: string) => {
+    sendRequest('gitlab:closeMergeRequest', { projectId, mergeRequestIid, tempBranchName });
   }, [sendRequest]);
 
   // 获取当前工作区仓库信息

@@ -145,6 +145,7 @@ export interface CherryPickResult {
   target_branch: string;
   success: boolean;
   merge_request?: GitLabMergeRequest;
+  temp_branch_name?: string; // 添加临时分支名称字段
   error?: string;
   message?: string;
 }

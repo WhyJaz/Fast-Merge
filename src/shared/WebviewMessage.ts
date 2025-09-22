@@ -7,7 +7,7 @@ export interface WebviewMessage {
 
 // GitLab 相关消息类型
 export interface GitLabMessage extends WebviewMessage {
-	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate'
+	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:closeMergeRequest' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate'
 }
 
 // 配置相关消息类型
@@ -64,6 +64,16 @@ export interface CreateCherryPickMRMessage extends GitLabMessage {
 	}
 }
 
+// 关闭合并请求
+export interface CloseMergeRequestMessage extends GitLabMessage {
+	type: 'gitlab:closeMergeRequest'
+	message: {
+		projectId: number
+		mergeRequestIid: number
+		tempBranchName?: string // 添加临时分支名称字段
+	}
+}
+
 // 获取当前仓库信息
 export interface GetCurrentRepoMessage extends GitLabMessage {
 	type: 'gitlab:getCurrentRepo'
@@ -101,6 +111,7 @@ export type AllWebviewMessages =
 	| GetCommitsMessage 
 	| CreateMergeRequestMessage 
 	| CreateCherryPickMRMessage 
+	| CloseMergeRequestMessage
 	| GetCurrentRepoMessage
 	| SetConfigurationMessage
 	| ConflictStatusUpdateMessage
