@@ -158,6 +158,7 @@ export const useGitLabApi = () => {
         const newMap = new Map(prev);
         newMap.delete(type);
         return newMap;
+      });
       setLoading(prev => {
         const newMap = new Map(prev);
         newMap.delete(type);
