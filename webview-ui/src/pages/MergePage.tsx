@@ -119,7 +119,9 @@ export const MergePage: React.FC = () => {
   }, [selectedProject]);
 
   const fetchCommits = () => {
-    getCommits(selectedProject?.id, sourceBranch, '', 1, 1);
+    if (selectedProject?.id && sourceBranch) {
+      getCommits(selectedProject?.id, sourceBranch, '', 1, 1);
+    }
   }
 
   // 当源分支变化
@@ -371,7 +373,7 @@ export const MergePage: React.FC = () => {
                     <BranchSelector
                       projectId={selectedProject?.id}
                       value={targetBranch}
-                      onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch[0] : branch)}
+                      onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch?.[0] : branch as any)}
                       placeholder="可输入进行搜索，以选择目标分支"
                     />
                   </Form.Item>
