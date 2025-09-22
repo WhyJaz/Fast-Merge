@@ -120,7 +120,7 @@ export const MergePage: React.FC = () => {
 
   const fetchCommits = () => {
     if (selectedProject?.id && sourceBranch) {
-      getCommits(selectedProject?.id, sourceBranch, '', 1, 1);
+      getCommits(selectedProject?.id, sourceBranch, '', 1, 20);
     }
   }
 
@@ -178,7 +178,6 @@ export const MergePage: React.FC = () => {
   const handleCommitChange = (commitId: string | string[] | undefined) => {
     const id = Array.isArray(commitId) ? commitId[0] : commitId;
     setSelectedCommit(id);
-    
     // 从当前的commits状态中找到对应的完整信息
     if (commitsState.data && id) {
       const detail = commitsState.data.find(commit => commit.id === id);
@@ -197,7 +196,7 @@ export const MergePage: React.FC = () => {
       setSelectedCommit(undefined);
       setSelectedCommitDetail(null);
       // 重新获取提交列表
-      getCommits(selectedProject.id, sourceBranch, '', 1, 1);
+      getCommits(selectedProject.id, sourceBranch, '', 1, 20);
     }
   };
 

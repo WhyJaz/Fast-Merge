@@ -18,6 +18,9 @@ export interface GitLabProject {
     kind: string;
     full_path: string;
   };
+  // 添加扩展属性用于前端使用
+  needInit?: boolean;
+  gitlabProjectPath?: string;
 }
 
 export interface GitLabBranch {
@@ -73,6 +76,8 @@ export interface GitLabMergeRequest {
   description: string;
   state: 'opened' | 'closed' | 'merged';
   merge_status: 'can_be_merged' | 'cannot_be_merged' | 'checking';
+  detailed_merge_status?: 'mergeable' | 'conflict' | 'unchecked' | 'checking' | 'cannot_be_merged' | 'cannot_be_merged_recheck';
+  has_conflicts?: boolean;
   source_branch: string;
   target_branch: string;
   author: {
@@ -88,6 +93,8 @@ export interface GitLabMergeRequest {
   merged_at?: string;
   closed_at?: string;
   merge_commit_sha?: string;
+  // 添加冲突校验状态
+  conflictCheckStatus?: 'checking' | 'completed' | 'failed';
 }
 
 export interface GitLabUser {
@@ -122,8 +129,8 @@ export interface CherryPickOptions {
   commits: string[];
   target_branches: string[];
   title_prefix?: string;
+  title?: string; // 添加完整标题字段
   description?: string;
-  title?: string;
   commit_details?: GitLabCommit[]; // 添加commit详细信息
 }
 

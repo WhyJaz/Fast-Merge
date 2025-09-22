@@ -292,9 +292,31 @@ class MyProvider implements vscode.WebviewViewProvider {
 		try {
 			const result = await this.gitLabService.createMergeRequest(params.projectId, params.options)
 			this.sendResponse('gitlab:createMergeRequest', result.success, result, result.error)
+			
+			// 如果MR创建成功，启动异步冲突校验
+			if (result.success && result.merge_request) {
+				this.startAsyncConflictCheck(params.projectId, result.merge_request.iid)
+			}
 		} catch (error: any) {
 			this.sendResponse('gitlab:createMergeRequest', false, null, error.message)
 		}
+	}
+
+	// 启动异步冲突校验
+	private startAsyncConflictCheck(projectId: number, mergeRequestIid: number): void {
+		this.gitLabService.startAsyncConflictCheck(
+			projectId,
+			mergeRequestIid,
+			(updatedMR) => {
+				// 向前端发送冲突状态更新消息
+				this.view?.webview.postMessage({
+					type: 'gitlab:conflictStatusUpdate',
+					projectId,
+					mergeRequestIid,
+					mergeRequest: updatedMR
+				});
+			}
+		);
 	}
 
 	// 处理创建Cherry Pick合并请求
@@ -302,6 +324,15 @@ class MyProvider implements vscode.WebviewViewProvider {
 		try {
 			const results = await this.gitLabService.createCherryPickMergeRequests(params.projectId, params.options)
 			this.sendResponse('gitlab:createCherryPickMR', true, results)
+			
+			// 为每个成功的Cherry Pick MR启动异步冲突校验
+			if (results && Array.isArray(results)) {
+				results.forEach(result => {
+					if (result.success && result.merge_request) {
+						this.startAsyncConflictCheck(params.projectId, result.merge_request.iid)
+					}
+				});
+			}
 		} catch (error: any) {
 			this.sendResponse('gitlab:createCherryPickMR', false, null, error.message)
 		}

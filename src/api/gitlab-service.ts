@@ -16,6 +16,8 @@ import {
 export class GitLabService {
   private httpClient: HttpClient;
   private config: FastMergeConfig | null = null;
+  private conflictCheckTimers: Map<string, NodeJS.Timeout> = new Map();
+  private conflictCheckCallbacks: Map<string, (result: GitLabMergeRequest) => void> = new Map();
 
   constructor(initialConfig?: FastMergeConfig) {
     this.httpClient = new HttpClient(initialConfig);
@@ -85,7 +87,7 @@ export class GitLabService {
    */
   async getBranches(projectId: number, search?: string): Promise<GitLabBranch[]> {
     const params: Record<string, string | number> = {
-      per_page: '100'
+      per_page: '300' // 增加获取的分支数量，确保包含更多保护分支
     };
 
     if (search) {
@@ -136,28 +138,19 @@ export class GitLabService {
         options
       );
       
-      // 轮询检查合并状态，直到不再是checking状态
-      try {
-        const updatedMR = await this.waitForMergeStatusReady(projectId, response.data.iid);
-        console.log('DEBUG: 轮询检查完成:', {
-          merge_status: updatedMR.merge_status,
-          has_conflicts: (updatedMR as any).has_conflicts,
-          title: updatedMR.title
-        });
-        return {
-          success: true,
-          merge_request: updatedMR,
-          message: `合并请求已创建: ${updatedMR.title}`
-        };
-      } catch (checkError) {
-        console.error('DEBUG: 冲突检查失败:', checkError);
-        // 冲突检查失败，返回原始结果
-        return {
-          success: true,
-          merge_request: response.data,
-          message: `合并请求已创建: ${response.data.title}（冲突状态检查失败）`
-        };
-      }
+      // 立即返回结果，不等待冲突校验
+      console.log('DEBUG: MR创建成功，立即返回:', {
+        iid: response.data.iid,
+        title: response.data.title,
+        merge_status: response.data.merge_status,
+        detailed_merge_status: response.data.detailed_merge_status
+      });
+      
+      return {
+        success: true,
+        merge_request: response.data,
+        message: `合并请求已创建: ${response.data.title}（正在后台校验冲突状态）`
+      };
     } catch (error: any) {
       return {
         success: false,
@@ -205,6 +198,7 @@ export class GitLabService {
 
   /**
    * 轮询等待合并状态准备就绪（不再是checking状态）
+   * @deprecated 此方法已废弃，请使用 startAsyncConflictCheck 进行异步冲突校验
    */
   async waitForMergeStatusReady(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
     const maxAttempts = 30; // 最多尝试30次，避免无限循环
@@ -213,9 +207,11 @@ export class GitLabService {
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
       
-      // 如果merge_status不是checking，说明状态已经确定，返回结果
-      if (mr.merge_status !== 'checking') {
-        console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mr.merge_status}`);
+      // 如果detailed_merge_status存在且不是checking，说明状态已经确定，返回结果
+      // 否则回退到使用merge_status进行检查
+      const mergeStatus = mr.detailed_merge_status || mr.merge_status;
+      if (mergeStatus !== 'checking' && mergeStatus !== 'unchecked') {
+        console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mergeStatus}`);
         return mr;
       }
       
@@ -229,6 +225,106 @@ export class GitLabService {
     // 如果达到最大尝试次数仍然是checking状态，返回最后一次的结果
     console.warn(`DEBUG: 达到最大尝试次数(${maxAttempts})，合并状态仍为checking`);
     return await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
+  }
+
+  /**
+   * 启动异步冲突校验
+   */
+  startAsyncConflictCheck(
+    projectId: number, 
+    mergeRequestIid: number, 
+    onStatusUpdate: (result: GitLabMergeRequest) => void
+  ): void {
+    const key = `${projectId}-${mergeRequestIid}`;
+    
+    // 如果已经在校验中，先停止之前的校验
+    this.stopAsyncConflictCheck(projectId, mergeRequestIid);
+    
+    console.log(`DEBUG: 启动异步冲突校验: ${key}`);
+    
+    // 保存回调函数
+    this.conflictCheckCallbacks.set(key, onStatusUpdate);
+    
+    // 立即执行一次检查
+    this.performConflictCheck(projectId, mergeRequestIid, 1);
+  }
+
+  /**
+   * 停止异步冲突校验
+   */
+  stopAsyncConflictCheck(projectId: number, mergeRequestIid: number): void {
+    const key = `${projectId}-${mergeRequestIid}`;
+    
+    const timer = this.conflictCheckTimers.get(key);
+    if (timer) {
+      clearTimeout(timer);
+      this.conflictCheckTimers.delete(key);
+      console.log(`DEBUG: 停止异步冲突校验: ${key}`);
+    }
+    
+    this.conflictCheckCallbacks.delete(key);
+  }
+
+  /**
+   * 执行冲突检查
+   */
+  private async performConflictCheck(projectId: number, mergeRequestIid: number, attempt: number): Promise<void> {
+    const key = `${projectId}-${mergeRequestIid}`;
+    const maxAttempts = 30; // 最多尝试30次
+    const intervalMs = 1000; // 每秒检查一次
+    
+    try {
+      const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
+      
+      // 如果detailed_merge_status存在且不是checking，说明状态已经确定
+      const mergeStatus = mr.detailed_merge_status || mr.merge_status;
+      if (mergeStatus !== 'checking' && mergeStatus !== 'unchecked') {
+        console.log(`DEBUG: 异步冲突校验完成，尝试次数: ${attempt}`, {
+          merge_status: mr.merge_status,
+          detailed_merge_status: mr.detailed_merge_status,
+          has_conflicts: mr.has_conflicts,
+          iid: mr.iid,
+          title: mr.title
+        });
+        
+        // 调用回调函数通知状态更新
+        const callback = this.conflictCheckCallbacks.get(key);
+        if (callback) {
+          callback(mr);
+        }
+        
+        // 清理资源
+        this.conflictCheckTimers.delete(key);
+        this.conflictCheckCallbacks.delete(key);
+        return;
+      }
+      
+      // 如果还没达到最大尝试次数，继续检查
+      if (attempt < maxAttempts) {
+        console.log(`DEBUG: 异步冲突校验中，第${attempt}次尝试，继续等待...`);
+        const timer = setTimeout(() => {
+          this.performConflictCheck(projectId, mergeRequestIid, attempt + 1);
+        }, intervalMs);
+        this.conflictCheckTimers.set(key, timer);
+      } else {
+        // 达到最大尝试次数，返回最后一次结果
+        console.warn(`DEBUG: 异步冲突校验达到最大尝试次数(${maxAttempts})，合并状态仍为checking`);
+        const callback = this.conflictCheckCallbacks.get(key);
+        if (callback) {
+          callback(mr);
+        }
+        
+        // 清理资源
+        this.conflictCheckTimers.delete(key);
+        this.conflictCheckCallbacks.delete(key);
+      }
+    } catch (error) {
+      console.error(`DEBUG: 异步冲突校验失败: ${key}`, error);
+      
+      // 清理资源
+      this.conflictCheckTimers.delete(key);
+      this.conflictCheckCallbacks.delete(key);
+    }
   }
 
   /**
@@ -267,7 +363,10 @@ export class GitLabService {
 
         // 创建合并请求
         let title = '';
-        if (options.commit_details && options.commit_details.length > 0) {
+        if (options.title) {
+          // 优先使用用户提供的完整标题
+          title = options.title;
+        } else if (options.commit_details && options.commit_details.length > 0) {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commit_details[0].title}`;
         } else {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;
@@ -310,7 +409,7 @@ export class GitLabService {
           target_branch: targetBranch,
           success: false,
           error: error.message || 'Cherry-pick 操作失败',
-          message: `Cherry-pick 到分支 ${targetBranch} 失败: ${error.message || '未知错误'}`
+          message: `${error.message || '未知错误'}`
         };
       }
     };
