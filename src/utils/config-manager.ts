@@ -9,7 +9,7 @@ export interface FastMergeConfig {
 
 export const DEFAULT_CONFIG: FastMergeConfig = {
   gitlab: {
-    baseUrl: 'https://gitlab.seeyon.com',
+    baseUrl: 'https://gitlab.xxxx.com',
     token: '',
     projectId: undefined
   }

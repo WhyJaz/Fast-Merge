@@ -96,7 +96,7 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
         <Paragraph>
           <Text strong>GitLab 服务器地址：</Text>
           <br />
-          • GitLab：<Text code>https://gitlab.seeyon.com</Text>
+          • GitLab：<Text code>https://gitlab.xxxx.com</Text>
           <br />
         </Paragraph>
         
@@ -124,7 +124,7 @@ export const GitLabConfig: React.FC<GitLabConfigProps> = ({
             }}>
   {`{
     "gitlab": {
-      "baseUrl": "https://gitlab.seeyon.com",
+      "baseUrl": "https://gitlab.xxxx.com",
       "token": "xxxxxxxxxxxxxxxxxxxx"
     }
   }`}
