@@ -14,7 +14,6 @@ interface CommitSelectorProps {
   onChange?: (commit: string | string[] | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
-  multiple?: boolean;
   maxTagCount?: number;
 }
 
@@ -25,7 +24,6 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
   onChange,
   placeholder = "选择提交",
   disabled = false,
-  multiple = false,
   maxTagCount = 2
 }) => {
   const { getCommits, commitsState } = useGitLabApi();
@@ -91,9 +89,8 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
 
   const renderCommitOption = (commit: GitLabCommit) => (
     <Option key={commit.id} value={commit.id}>
-      <div style={{ padding: '4px 0' }}>
+      <div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <BranchesOutlined style={{ color: '#722ed1', marginTop: 8 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ 
               fontWeight: 500,
@@ -136,14 +133,13 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
 
   return (
     <Select
-      mode={multiple ? 'multiple' : undefined}
+      mode={"multiple"}
       showSearch
       value={value}
       placeholder={placeholder}
       disabled={disabled || !projectId || !branch}
       loading={commitsState.loading}
       onSearch={handleSearch}
-      onSelect={handleSelect}
       onChange={handleSelect}
       filterOption={false}
       style={{ width: '100%' }}

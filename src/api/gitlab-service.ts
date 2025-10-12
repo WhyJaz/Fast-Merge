@@ -339,26 +339,31 @@ export class GitLabService {
         // 基于目标分支创建临时分支
         await this.createBranch(projectId, tempBranchName, targetBranch);
 
-        // 并发执行所有commit的cherry-pick操作
-        const cherryPickPromises = options.commits.map(async (commitId) => {
+        // 按时间顺序排序commits（如果有commit_details的话）
+        let sortedCommits = options.commits;
+        if (options.commit_details && options.commit_details.length > 0) {
+          // 按committed_date排序，确保按时间顺序cherry-pick
+          const commitMap = new Map(options.commit_details.map(commit => [commit.id, commit]));
+          sortedCommits = options.commits
+            .map(id => ({ id, commit: commitMap.get(id) }))
+            .filter(item => item.commit) // 过滤掉找不到详情的commit
+            .sort((a, b) => new Date(a.commit!.committed_date).getTime() - new Date(b.commit!.committed_date).getTime())
+            .map(item => item.id);
+        }
+
+        // 按顺序执行cherry-pick操作（不是并发）
+        for (const commitId of sortedCommits) {
           try {
             // 使用GitLab API的cherry-pick功能
-            return await this.httpClient.post(
+            await this.httpClient.post(
               `/projects/${projectId}/repository/commits/${commitId}/cherry_pick`,
               { branch: tempBranchName }
             );
           } catch (cherryPickError: any) {
+            // 如果cherry-pick失败，清理临时分支并返回错误
+            await this.deleteBranch(projectId, tempBranchName);
             throw new Error(`Cherry-pick commit ${commitId} 失败: ${cherryPickError.message}`);
           }
-        });
-
-        // 等待所有cherry-pick操作完成
-        try {
-          await Promise.all(cherryPickPromises);
-        } catch (cherryPickError: any) {
-          // 如果任何cherry-pick失败，清理临时分支并返回错误
-          await this.deleteBranch(projectId, tempBranchName);
-          throw cherryPickError;
         }
 
         // 创建合并请求

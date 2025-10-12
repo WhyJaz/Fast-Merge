@@ -20,3 +20,5 @@
 欢迎提供宝贵意见和反馈，也欢迎加入此项目一起开发，完善插件
 
 项目地址：https://github.com/WhyJaz/Fast-Merge
+
+意见及反馈收集：https://docs.qq.com/sheet/DWE1UZUFiVk9JVFBS?no_promotion=1&tab=BB08J2

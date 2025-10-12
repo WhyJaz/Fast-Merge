@@ -58,8 +58,8 @@ export const MergePage: React.FC = () => {
   const [sourceBranch, setSourceBranch] = useState<string>();
   // 分支合并模式的目标分支
   const [targetBranch, setTargetBranch] = useState<string>('test');
-  const [selectedCommit, setSelectedCommit] = useState<string | undefined>(undefined);
-  const [selectedCommitDetail, setSelectedCommitDetail] = useState<GitLabCommit | null>(null); // 存储完整的commit信息
+  const [selectedCommits, setSelectedCommits] = useState<string[]>([]);
+  const [selectedCommitDetails, setSelectedCommitDetails] = useState<GitLabCommit[]>([]); // 存储完整的commit信息
   // cherry-pick合并模式的目标分支
   const [targetBranches, setTargetBranches] = useState<string[]>(['test']);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,8 +111,8 @@ export const MergePage: React.FC = () => {
       // 项目变化时重置所有分支和提交选择
       setSourceBranch(undefined); // 修复：添加清空源分支选择
       setTargetBranch('test');
-      setSelectedCommit(undefined);
-      setSelectedCommitDetail(null);
+      setSelectedCommits([]);
+      setSelectedCommitDetails([]);
       setTargetBranches(['test']);
       setMergeTitle('');
     }
@@ -127,8 +127,8 @@ export const MergePage: React.FC = () => {
   // 当源分支变化
   useEffect(() => {
     if (sourceBranch) {
-      setSelectedCommit(undefined);
-      setSelectedCommitDetail(null);
+      setSelectedCommits([]);
+      setSelectedCommitDetails([]);
       // 自动获取该分支的最新提交并选中第一个
       fetchCommits()
     }
@@ -139,13 +139,14 @@ export const MergePage: React.FC = () => {
     if (
       sourceBranch &&
       commitsState.data && 
-      commitsState.data.length > 0
+      commitsState.data.length > 0 &&
+      selectedCommits.length === 0
     ) {
       // 自动选择最近的提交
-      setSelectedCommit(commitsState.data[0].id);
-      setSelectedCommitDetail(commitsState.data[0]);
+      setSelectedCommits([commitsState.data[0].id]);
+      setSelectedCommitDetails([commitsState.data[0]]);
     }
-  }, [commitsState.data, sourceBranch]);
+  }, [commitsState.data, sourceBranch, selectedCommits.length]);
 
   // 自动更新MR标题 - 当源分支或提交选择变化时
   useEffect(() => {
@@ -156,35 +157,49 @@ export const MergePage: React.FC = () => {
         setMergeTitle(commitsState.data[0].title);
       } else if (mergeType === 'cherry-pick') {
         // Cherry-pick模式：根据选择的提交更新标题
-        if (selectedCommitDetail) {
-          setMergeTitle(selectedCommitDetail.title);
+        if (selectedCommitDetails.length > 0) {
+          // 取时间最近的commit作为标题
+          const latestCommit = selectedCommitDetails.reduce((latest, current) => 
+            new Date(current.committed_date) > new Date(latest.committed_date) ? current : latest
+          );
+          setMergeTitle(latestCommit.title);
         } else {
           // 如果没有选择具体提交，使用最新提交
           setMergeTitle(commitsState.data[0].title);
         }
       }
     }
-  }, [commitsState.data, mergeType, selectedCommitDetail, sourceBranch]);
+  }, [commitsState.data, mergeType, selectedCommitDetails, sourceBranch]);
 
   // 当合并类型变化时，清空相关选择
   useEffect(() => {
     // 修复规则3：切换合并类型时清空提交和目标分支选择
-    setSelectedCommit(undefined);
+    setSelectedCommits([]);
+    setSelectedCommitDetails([]);
     setTargetBranches(['test']);
     setTargetBranch('test');
   }, [mergeType]);
 
   // 处理commit选择变化
-  const handleCommitChange = (commitId: string | string[] | undefined) => {
-    const id = Array.isArray(commitId) ? commitId[0] : commitId;
-    setSelectedCommit(id);
+  const handleCommitChange = (commitIds: string | string[] | undefined) => {
+    const ids = Array.isArray(commitIds) ? commitIds : (commitIds ? [commitIds] : []);
+    setSelectedCommits(ids);
     // 从当前的commits状态中找到对应的完整信息
-    if (commitsState.data && id) {
-      const detail = commitsState.data.find(commit => commit.id === id);
-      setSelectedCommitDetail(detail || null);
-      setMergeTitle(detail?.title || '');
+    if (commitsState.data && ids.length > 0) {
+      const details = ids.map(id => commitsState.data!.find(commit => commit.id === id)).filter(Boolean) as GitLabCommit[];
+      setSelectedCommitDetails(details);
+      
+      // 更新标题 - 取时间最近的commit
+      if (details.length > 0) {
+        const latestCommit = details.reduce((latest, current) => 
+          new Date(current.committed_date) > new Date(latest.committed_date) ? current : latest
+        );
+        setMergeTitle(latestCommit.title);
+      } else {
+        setMergeTitle('');
+      }
     } else {
-      setSelectedCommitDetail(null);
+      setSelectedCommitDetails([]);
       setMergeTitle('');
     }
   };
@@ -193,8 +208,8 @@ export const MergePage: React.FC = () => {
   const handleRefreshCommits = () => {
     if (selectedProject && sourceBranch) {
       // 清空当前选择
-      setSelectedCommit(undefined);
-      setSelectedCommitDetail(null);
+      setSelectedCommits([]);
+      setSelectedCommitDetails([]);
       // 重新获取提交列表
       getCommits(selectedProject.id, sourceBranch, '', 1, 20);
     }
@@ -211,11 +226,11 @@ export const MergePage: React.FC = () => {
       squash: false
     };
     const cherryPickOptions: CherryPickOptions = {
-      commits: selectedCommit ? [selectedCommit] : [],
+      commits: selectedCommits,
       target_branches: targetBranches,
       title: mergeTitle || 'Cherry-pick',
-      description: `Cherry-pick 提交 ${selectedCommit} 到目标分支`,
-      commit_details: selectedCommitDetail ? [selectedCommitDetail] : undefined // 传递完整的commit信息
+      description: `Cherry-pick 提交 ${selectedCommits.join(', ')} 到目标分支`,
+      commit_details: selectedCommitDetails.length > 0 ? selectedCommitDetails : undefined // 传递完整的commit信息
     };
     let options = null
     let mrFunc = null
@@ -246,7 +261,7 @@ export const MergePage: React.FC = () => {
     if (mergeType === 'branch') {
       return sourceBranch && targetBranch && sourceBranch !== targetBranch;
     } else {
-      return selectedCommit && targetBranches.length > 0;
+      return selectedCommits.length > 0 && targetBranches.length > 0;
     }
   };
 
@@ -412,10 +427,9 @@ export const MergePage: React.FC = () => {
                         <CommitSelector
                           projectId={selectedProject?.id}
                           branch={sourceBranch}
-                          value={selectedCommit}
+                          value={selectedCommits}
                           onChange={handleCommitChange}
-                          placeholder="选择要cherry-pick的提交"
-                          multiple={false}
+                          placeholder="选择要cherry-pick的提交（支持多选）"
                         />
                       </div>
                       <Button
