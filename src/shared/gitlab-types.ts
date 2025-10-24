@@ -114,7 +114,7 @@ export interface GitLabConfiguration {
 }
 
 export interface MergeRequestOptions {
-	timestamp: string
+	timestamp?: string
 	title: string
 	description?: string
 	source_branch: string
@@ -127,7 +127,7 @@ export interface MergeRequestOptions {
 }
 
 export interface CherryPickOptions {
-	timestamp: string
+	timestamp?: string
 	commits: string[]
 	target_branches: string[]
 	title_prefix?: string
@@ -137,7 +137,7 @@ export interface CherryPickOptions {
 }
 
 export interface MergeResult {
-	options: MergeRequestOptions
+	options?: MergeRequestOptions
 	success: boolean
 	merge_request?: GitLabMergeRequest
 	error?: string
@@ -145,7 +145,7 @@ export interface MergeResult {
 }
 
 export interface CherryPickResult {
-	options: CherryPickOptions
+	options?: CherryPickOptions
 	target_branch: string
 	success: boolean
 	merge_request?: GitLabMergeRequest
