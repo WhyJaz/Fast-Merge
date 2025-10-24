@@ -333,6 +333,17 @@ span.ant-typography-link {
 .ant-table-wrapper .ant-table-thead >tr>th:not(:last-child)::before{
   background-color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
 }
+.ant-table-wrapper .ant-table-tbody>tr.ant-table-placeholder{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-table-tbody>tr.ant-table-placeholder:hover>td{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-empty-normal .ant-empty-description{
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
 
 /* 响应式设计 */
 @media (max-width: 768px) {
