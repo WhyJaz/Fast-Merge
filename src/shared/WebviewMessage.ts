@@ -101,16 +101,17 @@ export interface ResponseMessage extends WebviewMessage {
 		success: boolean
 		data?: any
 		error?: string
+		options?: Record<string, any>
 	}
 }
 
-export type AllWebviewMessages = 
-	| WebviewMessage 
-	| GetProjectsMessage 
-	| GetBranchesMessage 
-	| GetCommitsMessage 
-	| CreateMergeRequestMessage 
-	| CreateCherryPickMRMessage 
+export type AllWebviewMessages =
+	| WebviewMessage
+	| GetProjectsMessage
+	| GetBranchesMessage
+	| GetCommitsMessage
+	| CreateMergeRequestMessage
+	| CreateCherryPickMRMessage
 	| CloseMergeRequestMessage
 	| GetCurrentRepoMessage
 	| SetConfigurationMessage

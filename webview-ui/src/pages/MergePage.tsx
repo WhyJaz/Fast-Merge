@@ -4,7 +4,8 @@ import {
   MergeOutlined,
   NodeIndexOutlined,
   SettingOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  HistoryOutlined
 } from '@ant-design/icons';
 import {
   Alert,
@@ -16,6 +17,7 @@ import {
   Radio,
   Row,
   Space,
+  Tabs,
   Tag,
   Typography,
   message
@@ -24,12 +26,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { BranchSelector } from '../components/BranchSelector';
 import { CommitSelector } from '../components/CommitSelector';
 import { MergeStatus } from '../components/MergeStatus';
-import { ProjectSelector } from '../components/ProjectSelector';
+import { getName, ProjectSelector } from '../components/ProjectSelector';
 import { useConfig } from '../hooks/useConfig';
 import { useGitLabApi } from '../hooks/useGitLabApi';
 import { CherryPickOptions, GitLabCommit, GitLabProject, MergeRequestOptions } from '../types/gitlab';
-import { vscode,  } from '../utils/vscode';
+import { vscode, } from '../utils/vscode';
 import { validateMr } from '../utils/tool';
+import { MergeHistory } from '@/components/MergeHistory';
 
 const { Text, Title } = Typography;
 
@@ -38,9 +41,9 @@ const globalState = {
 }
 
 export const MergePage: React.FC = () => {
-  const { 
-    getCurrentRepo, 
-    createMergeRequest, 
+  const {
+    getCurrentRepo,
+    createMergeRequest,
     createCherryPickMR,
     getCommits,
     currentRepoState,
@@ -49,7 +52,7 @@ export const MergePage: React.FC = () => {
     commitsState,
     clearState
   } = useGitLabApi();
-  
+
   const { configInfo } = useConfig();
 
   // 状态管理
@@ -79,13 +82,13 @@ export const MergePage: React.FC = () => {
   useEffect(() => {
     if (currentRepoState.data && !currentRepoState.loading) {
       const repoInfo = currentRepoState.data || {};
-      const {currentBranch } = repoInfo;
-      if (!sourceBranch && projectName === repoInfo.gitlabProjectPath) { 
+      const { currentBranch } = repoInfo;
+      if (!sourceBranch && projectName === repoInfo.gitlabProjectPath) {
         setTimeout(() => {
           setSourceBranch(currentBranch)
         }, 1000)
       }
-      !projectName && setSelectedProject({...repoInfo, needInit: true} as any)
+      !projectName && setSelectedProject({ ...repoInfo, needInit: true } as any)
     }
   }, [currentRepoState.data, currentRepoState.loading, projectName]);
 
@@ -138,7 +141,7 @@ export const MergePage: React.FC = () => {
   useEffect(() => {
     if (
       sourceBranch &&
-      commitsState.data && 
+      commitsState.data &&
       commitsState.data.length > 0 &&
       selectedCommits.length === 0
     ) {
@@ -159,7 +162,7 @@ export const MergePage: React.FC = () => {
         // Cherry-pick模式：根据选择的提交更新标题
         if (selectedCommitDetails.length > 0) {
           // 取时间最近的commit作为标题
-          const latestCommit = selectedCommitDetails.reduce((latest, current) => 
+          const latestCommit = selectedCommitDetails.reduce((latest, current) =>
             new Date(current.committed_date) > new Date(latest.committed_date) ? current : latest
           );
           setMergeTitle(latestCommit.title);
@@ -180,6 +183,37 @@ export const MergePage: React.FC = () => {
     setTargetBranch('test');
   }, [mergeType]);
 
+
+  // 自动存储20条记录记录
+  useEffect(() => {
+    const data = mergeRequestState.data || cherryPickState.data;
+    const options = mergeRequestState?.options || cherryPickState?.options || {};
+    const { timestamp } = options;
+    if (selectedProject?.id && isSubmitting && data) {
+      // console.log("options", options)
+      const submittingHistory = JSON.parse(localStorage.getItem("submittingHistory") || '[]');
+      // console.log("last-submittingHistory", submittingHistory)
+      const newSubmittingHistory = submittingHistory;
+      const recordItem = { projectName: getName(selectedProject), timestamp, data };
+      const recordIndex = submittingHistory.findIndex((item: any) => item.timestamp === timestamp);
+      // 有匹配的，更新data即可
+      if (recordIndex >= 0 && recordIndex < newSubmittingHistory.length) {
+        newSubmittingHistory[recordIndex] = {
+          ...newSubmittingHistory[recordIndex],
+          data
+        };
+      } else {
+        // 没有匹配的，直接插入数据
+        submittingHistory.unshift(recordItem);
+      }
+      if (newSubmittingHistory.length > 20) {
+        newSubmittingHistory.splice(20);
+      }
+      // console.log("new-submittingHistory", newSubmittingHistory)
+      localStorage.setItem("submittingHistory", JSON.stringify(newSubmittingHistory))
+    }
+  }, [selectedProject?.id && isSubmitting, mergeRequestState.data, cherryPickState.data])
+
   // 处理commit选择变化
   const handleCommitChange = (commitIds: string | string[] | undefined) => {
     const ids = Array.isArray(commitIds) ? commitIds : (commitIds ? [commitIds] : []);
@@ -188,10 +222,10 @@ export const MergePage: React.FC = () => {
     if (commitsState.data && ids.length > 0) {
       const details = ids.map(id => commitsState.data!.find(commit => commit.id === id)).filter(Boolean) as GitLabCommit[];
       setSelectedCommitDetails(details);
-      
+
       // 更新标题 - 取时间最近的commit
       if (details.length > 0) {
-        const latestCommit = details.reduce((latest, current) => 
+        const latestCommit = details.reduce((latest, current) =>
           new Date(current.committed_date) > new Date(latest.committed_date) ? current : latest
         );
         setMergeTitle(latestCommit.title);
@@ -217,7 +251,9 @@ export const MergePage: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!selectedProject) return;
-    const branchOptions : MergeRequestOptions = {
+    const timestamp = getNowTimestamp();
+    const branchOptions: MergeRequestOptions = {
+      timestamp,
       title: mergeTitle || `Merge ${sourceBranch} into ${targetBranch}`,
       description: `自动创建的合并请求：将 ${sourceBranch} 分支合并到 ${targetBranch} 分支`,
       source_branch: sourceBranch!,
@@ -226,6 +262,7 @@ export const MergePage: React.FC = () => {
       squash: false
     };
     const cherryPickOptions: CherryPickOptions = {
+      timestamp,
       commits: selectedCommits,
       target_branches: targetBranches,
       title: mergeTitle || 'Cherry-pick',
@@ -257,7 +294,7 @@ export const MergePage: React.FC = () => {
 
   const canSubmit = () => {
     if (!selectedProject) return false;
-    
+
     if (mergeType === 'branch') {
       return sourceBranch && targetBranch && sourceBranch !== targetBranch;
     } else {
@@ -284,14 +321,14 @@ export const MergePage: React.FC = () => {
                   请检查配置文件中的服务器地址和访问令牌
                 </Text>
               )}
-              <div style={{position: 'absolute', right: 6, top: 6}}>
-                <Button 
+              <div style={{ position: 'absolute', right: 6, top: 6 }}>
+                <Button
                   icon={<SettingOutlined />}
                   onClick={() => vscode.postMessage({ type: 'config:open' })}
                   title="编辑 GitLab 配置文件"
                   type="default"
                   size="small"
-                  
+
                 >
                 </Button>
               </div>
@@ -302,232 +339,266 @@ export const MergePage: React.FC = () => {
           showIcon={false}
         />
       )}
-
-      {/* 主要配置区域 */}
-      <Card title="合并请求配置" style={{ marginBottom: 16 }}>
-        <Form 
-          layout="horizontal"
-          labelCol={{ flex: '0 0 auto' }}
-          wrapperCol={{ flex: '1 1 auto' }}
-        >
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item 
-                label="GitLab 项目" 
-                required
-                labelCol={{ flex: '0 0 auto' }}
-                wrapperCol={{ flex: '1 1 auto' }}
-              >
-                <ProjectSelector
-                  value={selectedProject}
-                  onChange={setSelectedProject}
-                  placeholder="可输入搜索，以选择 GitLab 项目"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item 
-                label="合并类型" 
-                required
-                labelCol={{ flex: '0 0 auto' }}
-                wrapperCol={{ flex: '1 1 auto' }}
-              >
-                <Radio.Group 
-                  value={mergeType} 
-                  onChange={(e) => setMergeType(e.target.value)}
+      <Tabs>
+        <Tabs.TabPane closable={false} style={{ padding: 8 }} icon={<MergeOutlined />} tab="合并请求配置" key="item-1">
+          {/* 主要配置区域 */}
+          {/* <Card title="合并请求配置" style={{ marginBottom: 16 }}> */}
+          <Form
+            labelAlign='right'
+            layout="horizontal"
+            labelCol={{ flex: '100px' }}
+            wrapperCol={{ flex: '1 1 0' }}
+          >
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  label="GitLab 项目"
+                  required
                 >
-                  <Radio value="cherry-pick">
-                    <Space>
-                      <NodeIndexOutlined />
-                      Cherry Pick
-                    </Space>
-                  </Radio>
-                  <Radio value="branch">
-                    <Space>
-                      <BranchesOutlined />
-                      Branch Merge
-                    </Space>
-                  </Radio>
-                </Radio.Group>
-              </Form.Item>
-            </Col>
-          </Row>
+                  <ProjectSelector
+                    value={selectedProject}
+                    onChange={setSelectedProject}
+                    placeholder="可输入搜索，以选择 GitLab 项目"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
 
-         
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  label="合并类型"
+                  required
+                >
+                  <Radio.Group
+                    value={mergeType}
+                    onChange={(e) => setMergeType(e.target.value)}
+                  >
+                    <Radio value="cherry-pick">
+                      <Space>
+                        <NodeIndexOutlined />
+                        Cherry Pick
+                      </Space>
+                    </Radio>
+                    <Radio value="branch">
+                      <Space>
+                        <BranchesOutlined />
+                        Branch Merge
+                      </Space>
+                    </Radio>
+                  </Radio.Group>
+                </Form.Item>
+              </Col>
+            </Row>
 
-          {mergeType === 'branch' ? (
-            <>
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="源分支" 
-                    required
-                    labelCol={{ flex: '0 0 auto' }}
-                    wrapperCol={{ flex: '1 1 auto' }}
-                  >
-                    <BranchSelector
-                      projectId={selectedProject?.id}
-                      value={sourceBranch}
-                      onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
-                      placeholder="可输入进行搜索，以选择源分支"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="目标分支" 
-                    required
-                    labelCol={{ flex: '0 0 auto' }}
-                    wrapperCol={{ flex: '1 1 auto' }}
-                  >
-                    <BranchSelector
-                      projectId={selectedProject?.id}
-                      value={targetBranch}
-                      onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch?.[0] : branch as any)}
-                      placeholder="可输入进行搜索，以选择目标分支"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </>
-          ) : (
-            <>
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="源分支" 
-                    required
-                    labelCol={{ flex: '0 0 auto' }}
-                    wrapperCol={{ flex: '1 1 auto' }}
-                  >
-                    <BranchSelector
-                      projectId={selectedProject?.id}
-                      value={sourceBranch}
-                      onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
-                      placeholder="可输入进行搜索，以选择源分支"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="选择提交" 
-                    required
-                    labelCol={{ flex: '0 0 auto' }}
-                    wrapperCol={{ flex: '1 1 auto' }}
-                  >
-                    <div style={{ display: 'flex', width: '100%', maxWidth: '100%' }}>
-                      <div style={{ flex: '1 1 0', minWidth: 0, marginRight: 8 }}>
-                        <CommitSelector
-                          projectId={selectedProject?.id}
-                          branch={sourceBranch}
-                          value={selectedCommits}
-                          onChange={handleCommitChange}
-                          placeholder="选择要cherry-pick的提交（支持多选）"
+
+
+            {mergeType === 'branch' ? (
+              <>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="源分支"
+                      required
+                    >
+                      <BranchSelector
+                        projectId={selectedProject?.id}
+                        value={sourceBranch}
+                        onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
+                        placeholder="可输入进行搜索，以选择源分支"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="目标分支"
+                      required
+                    >
+                      <BranchSelector
+                        projectId={selectedProject?.id}
+                        value={targetBranch}
+                        onChange={(branch) => setTargetBranch(Array.isArray(branch) ? branch?.[0] : branch as any)}
+                        placeholder="可输入进行搜索，以选择目标分支"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </>
+            ) : (
+              <>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="源分支"
+                      required
+                    >
+                      <BranchSelector
+                        projectId={selectedProject?.id}
+                        value={sourceBranch}
+                        onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
+                        placeholder="可输入进行搜索，以选择源分支"
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="选择提交"
+                      required
+                    >
+                      <div style={{ display: 'flex', width: '100%', maxWidth: '100%' }}>
+                        <div style={{ flex: '1 1 0', minWidth: 0, marginRight: 8 }}>
+                          <CommitSelector
+                            projectId={selectedProject?.id}
+                            branch={sourceBranch}
+                            value={selectedCommits}
+                            onChange={handleCommitChange}
+                            placeholder="选择要cherry-pick的提交（支持多选）"
+                          />
+                        </div>
+                        <Button
+                          icon={<ReloadOutlined />}
+                          onClick={handleRefreshCommits}
+                          disabled={!selectedProject || !sourceBranch || commitsState.loading}
+                          loading={commitsState.loading}
+                          title="刷新提交列表"
+                          type="text"
+                          style={{
+                            color: 'var(--vscode-foreground)',
+                            border: '1px solid var(--vscode-input-border)',
+                            backgroundColor: 'var(--vscode-input-background)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)';
+                            e.currentTarget.style.color = 'var(--vscode-foreground)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--vscode-input-background)';
+                            e.currentTarget.style.color = 'var(--vscode-foreground)';
+                          }}
                         />
                       </div>
-                      <Button
-                        icon={<ReloadOutlined />}
-                        onClick={handleRefreshCommits}
-                        disabled={!selectedProject || !sourceBranch || commitsState.loading}
-                        loading={commitsState.loading}
-                        title="刷新提交列表"
-                        type="text"
-                        style={{
-                          color: 'var(--vscode-foreground)',
-                          border: '1px solid var(--vscode-input-border)',
-                          backgroundColor: 'var(--vscode-input-background)',
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="目标分支"
+                      required
+                    >
+                      <BranchSelector
+                        projectId={selectedProject?.id}
+                        value={targetBranches}
+                        onChange={(branches) => {
+                          if (Array.isArray(branches)) {
+                            setTargetBranches(branches);
+                          } else if (branches) {
+                            setTargetBranches([branches]);
+                          } else {
+                            setTargetBranches([]);
+                          }
                         }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--vscode-list-hoverBackground)';
-                          e.currentTarget.style.color = 'var(--vscode-foreground)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--vscode-input-background)';
-                          e.currentTarget.style.color = 'var(--vscode-foreground)';
-                        }}
+                        placeholder="可输入进行搜索，以选择目标分支(可多选)"
+                        multiple={true}
                       />
-                    </div>
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={16}>
-                <Col span={24}>
-                  <Form.Item 
-                    label="目标分支" 
-                    required
-                    labelCol={{ flex: '0 0 auto' }}
-                    wrapperCol={{ flex: '1 1 auto' }}
-                  >
-                    <BranchSelector
-                      projectId={selectedProject?.id}
-                      value={targetBranches}
-                      onChange={(branches) => {
-                        if (Array.isArray(branches)) {
-                          setTargetBranches(branches);
-                        } else if (branches) {
-                          setTargetBranches([branches]);
-                        } else {
-                          setTargetBranches([]);
-                        }
-                      }}
-                      placeholder="可输入进行搜索，以选择目标分支(可多选)"
-                      multiple={true}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-            </>
-          )}
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </>
+            )}
 
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item 
-                label="MR标题" 
-                required
-                labelCol={{ flex: '0 0 auto' }}
-                wrapperCol={{ flex: '1 1 auto' }}
-              >
-                <Input
-                  value={mergeTitle}
-                  onChange={(e) => setMergeTitle(e.target.value)}
-                  placeholder="请输入合并请求标题"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item style={{ marginBottom: 0, textAlign: 'center' }}>
-            <Button 
-              type="primary" 
-              size="large" 
-              icon={<MergeOutlined />}
-              onClick={handleSubmit}
-              disabled={!canSubmit()}
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  label="MR标题"
+                  required
+                >
+                  <Input
+                    value={mergeTitle}
+                    onChange={(e) => setMergeTitle(e.target.value)}
+                    placeholder="请输入合并请求标题"
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Form.Item style={{ marginBottom: 16, textAlign: 'center' }}>
+              <Space>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<MergeOutlined />}
+                  onClick={handleSubmit}
+                  disabled={!canSubmit()}
+                  loading={isSubmitting}
+                  style={{ minWidth: 200 }}
+                >
+                  {isSubmitting ? '创建合并请求中...' : '创建合并请求'}
+                </Button>
+                <Button
+                  type="default"
+                  size="large"
+                  icon={<MergeOutlined />}
+                  onClick={() => {
+                    setSourceBranch(undefined); // 修复：添加清空源分支选择
+                    // 目标分支
+                    setTargetBranch('test');
+                    setSelectedCommits([]);
+                    setSelectedCommitDetails([]);
+                    setTargetBranches(['test']);
+                    // MR标题
+                    setMergeTitle('');
+
+
+                    // 清除之前的结果，准备显示新的merge request结果
+                    clearState('gitlab:createMergeRequest');
+                    clearState('gitlab:createCherryPickMR');
+                    setShowResults(false);
+
+                  }}
+                  disabled={isSubmitting}
+                  style={{ minWidth: 100 }}
+                >重置</Button>
+              </Space>
+            </Form.Item>
+          </Form>
+          {/* </Card> */}
+
+          {/* 结果展示区域 */}
+          {showResults && (
+            <MergeStatus
+              mergeResult={mergeRequestState.data || undefined}
+              cherryPickResults={cherryPickState.data || undefined}
               loading={isSubmitting}
-              style={{ minWidth: 200 }}
-            >
-              {isSubmitting ? '创建合并请求中...' : '创建合并请求'}
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
+              projectId={selectedProject?.id}
+            />
+          )}
+        </Tabs.TabPane>
+        <Tabs.TabPane closable={false} style={{ padding: 8 }} icon={<HistoryOutlined />} tab="历史记录" key="item-2">
+          <MergeHistory
+          />
+        </Tabs.TabPane>
+      </Tabs>
 
-      {/* 结果展示区域 */}
-      {showResults && (
-        <MergeStatus
-          mergeResult={mergeRequestState.data || undefined}
-          cherryPickResults={cherryPickState.data || undefined}
-          loading={isSubmitting}
-          projectId={selectedProject?.id}
-        />
-      )}
     </div>
   );
 };
+
+// 补零函数：确保数字为两位数（如 9 → "09"，12 → "12"）
+export const padZero = (num) => {
+  return num < 10 ? '0' + num : num.toString();
+}
+
+
+
+
+export const getNowTimestamp = () => {
+  // 获取当前日期时间
+  const date = new Date();
+  const timestamp = date.getTime(); // 毫秒级时间戳
+  return timestamp.toString();
+}

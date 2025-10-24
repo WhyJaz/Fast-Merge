@@ -78,13 +78,13 @@ class MyProvider implements vscode.WebviewViewProvider {
             <noscript>You need to enable JavaScript to run this app.</noscript>
             <div id="root-container">
               <div id="root"></div>
-              
+
             <script type="module" nonce="${nonce}" src="${scriptUri}"></script>
-            
+
             <script nonce="${nonce}">
               // 在全局范围内只调用一次acquireVsCodeApi
               window._vscodeApi = acquireVsCodeApi();
-              
+
               // 通过覆盖acquireVsCodeApi函数来避免重复获取API
               window.acquireVsCodeApi = function() {
                 return window._vscodeApi;
@@ -142,14 +142,14 @@ class MyProvider implements vscode.WebviewViewProvider {
 				<body>
 					<div id="root-container">
 						<div id="root"></div>
-					
+
 					${reactRefresh}
 					<script type="module" src="${scriptUri}"></script>
-					
+
 					<script nonce="${nonce}">
 					  // 在全局范围内只调用一次acquireVsCodeApi
 					  window._vscodeApi = acquireVsCodeApi();
-					  
+
 					  // 通过覆盖acquireVsCodeApi函数来避免重复获取API
 					  window.acquireVsCodeApi = function() {
 							return window._vscodeApi;
@@ -237,19 +237,20 @@ class MyProvider implements vscode.WebviewViewProvider {
 			}
 		} catch (error: any) {
 			console.error('处理消息失败:', error)
-			this.sendResponse(message.type, false, null, error.message)
+			this.sendResponse({ requestType: message.type, success: false, data: null, error: error.message })
 		}
 	}
 
 	// 发送响应消息
-	private sendResponse(requestType: string, success: boolean, data?: any, error?: string): void {
+	private sendResponse({ requestType, success, data, error, options }: { requestType: string, success: boolean, data?: any, error?: string, options?: Record<string, any> }): void {
 		const response: ResponseMessage = {
 			type: 'response',
 			message: {
 				requestType,
 				success,
 				data,
-				error
+				error,
+				options
 			}
 		}
 		this.view?.webview.postMessage(response)
@@ -259,9 +260,11 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleGetProjects(params: { search?: string; page?: number; perPage?: number }): Promise<void> {
 		try {
 			const projects = await this.gitLabService.getProjects(params.search, params.page, params.perPage)
-			this.sendResponse('gitlab:getProjects', true, projects)
+			this.sendResponse({ requestType: 'gitlab:getProjects', success: true, data: projects })
+
 		} catch (error: any) {
-			this.sendResponse('gitlab:getProjects', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:getProjects', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -269,21 +272,25 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleGetBranches(params: { projectId: number; search?: string }): Promise<void> {
 		try {
 			const branches = await this.gitLabService.getBranches(params.projectId, params.search)
-			this.sendResponse('gitlab:getBranches', true, branches)
+			this.sendResponse({ requestType: 'gitlab:getBranches', success: true, data: branches })
+
 		} catch (error: any) {
-			this.sendResponse('gitlab:getBranches', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:getBranches', success: false, data: null, error: error.message })
+
 		}
 	}
 
 	// 处理获取提交列表
 	private async handleGetCommits(params: { projectId: number; branch: string; search?: string; page?: number; perPage?: number }): Promise<void> {
 		try {
-			const commits = params.search 
+			const commits = params.search
 				? await this.gitLabService.searchCommits(params.projectId, params.branch, params.search, params.page, params.perPage)
 				: await this.gitLabService.getCommits(params.projectId, params.branch, params.search, params.page, params.perPage)
-			this.sendResponse('gitlab:getCommits', true, commits)
+			this.sendResponse({ requestType: 'gitlab:getCommits', success: true, data: commits })
+
 		} catch (error: any) {
-			this.sendResponse('gitlab:getCommits', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:getCommits', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -291,14 +298,15 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleCreateMergeRequest(params: { projectId: number; options: any }): Promise<void> {
 		try {
 			const result = await this.gitLabService.createMergeRequest(params.projectId, params.options)
-			this.sendResponse('gitlab:createMergeRequest', result.success, result, result.error)
-			
+			this.sendResponse({ requestType: 'gitlab:createMergeRequest', success: result.success, data: result, error: result.error, options: params.options })
+
+
 			// 如果MR创建成功，启动异步冲突校验
 			if (result.success && result.merge_request) {
 				this.startAsyncConflictCheck(params.projectId, result.merge_request.iid)
 			}
 		} catch (error: any) {
-			this.sendResponse('gitlab:createMergeRequest', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:createMergeRequest', success: false, data: null, error: error.message })
 		}
 	}
 
@@ -323,8 +331,10 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleCreateCherryPickMR(params: { projectId: number; options: any }): Promise<void> {
 		try {
 			const results = await this.gitLabService.createCherryPickMergeRequests(params.projectId, params.options)
-			this.sendResponse('gitlab:createCherryPickMR', true, results)
-			
+			this.sendResponse({ requestType: 'gitlab:createCherryPickMR', success: true, data: results, options: params.options })
+
+
+
 			// 为每个成功的Cherry Pick MR启动异步冲突校验
 			if (results && Array.isArray(results)) {
 				results.forEach(result => {
@@ -334,7 +344,8 @@ class MyProvider implements vscode.WebviewViewProvider {
 				});
 			}
 		} catch (error: any) {
-			this.sendResponse('gitlab:createCherryPickMR', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:createCherryPickMR', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -342,7 +353,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleCloseMergeRequest(params: { projectId: number; mergeRequestIid: number; tempBranchName?: string }): Promise<void> {
 		try {
 			const result = await this.gitLabService.closeMergeRequest(params.projectId, params.mergeRequestIid)
-			
+
 			// 如果提供了临时分支名称，尝试删除临时分支
 			if (params.tempBranchName) {
 				try {
@@ -353,10 +364,12 @@ class MyProvider implements vscode.WebviewViewProvider {
 					// 不抛出错误，因为关闭MR已经成功，删除分支失败不应该影响整体操作
 				}
 			}
-			
-			this.sendResponse('gitlab:closeMergeRequest', true, result)
+
+			this.sendResponse({ requestType: 'gitlab:closeMergeRequest', success: true, data: result })
+
 		} catch (error: any) {
-			this.sendResponse('gitlab:closeMergeRequest', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:closeMergeRequest', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -364,7 +377,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleGetCurrentRepo(): Promise<void> {
 		try {
 			const repoInfo = await this.gitUtils.getRepositoryInfo()
-			
+
 			// 如果有GitLab项目路径，尝试获取项目详情
 			if (repoInfo.gitlabProjectPath) {
 				try {
@@ -379,9 +392,11 @@ class MyProvider implements vscode.WebviewViewProvider {
 				}
 			}
 
-			this.sendResponse('gitlab:getCurrentRepo', true, repoInfo)
+			this.sendResponse({ requestType: 'gitlab:getCurrentRepo', success: true, data: repoInfo })
+
 		} catch (error: any) {
-			this.sendResponse('gitlab:getCurrentRepo', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:getCurrentRepo', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -396,11 +411,12 @@ class MyProvider implements vscode.WebviewViewProvider {
 			await this.configManager.saveConfig(currentConfig)
 			// 更新服务配置
 			this.gitLabService.updateConfig(currentConfig)
-			
+
 			const testResult = await this.gitLabService.testConnection()
-			this.sendResponse('gitlab:setConfiguration', testResult.success, testResult, testResult.success ? undefined : testResult.message)
+			this.sendResponse({ requestType: 'gitlab:setConfiguration', success: testResult.success, data: testResult, error: testResult.success ? undefined : testResult.message })
 		} catch (error: any) {
-			this.sendResponse('gitlab:setConfiguration', false, null, error.message)
+			this.sendResponse({ requestType: 'gitlab:setConfiguration', success: false, data: null, error: error.message })
+
 		}
 	}
 
@@ -408,7 +424,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async initializeConfig(): Promise<void> {
 		try {
 			const config = await this.configManager.loadConfig()
-			
+
 			// 更新GitLab服务配置，使用完整的配置对象
 			this.gitLabService.updateConfig(config)
 
@@ -416,7 +432,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 			this.configWatcher = this.configManager.watchConfigFile(async (newConfig) => {
 				// 更新GitLab服务配置
 				this.gitLabService.updateConfig(newConfig)
-				
+
 				// 通知webview配置已更新
 				this.sendConfigStatus()
 			})
@@ -439,7 +455,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 	private async handleReloadConfig(): Promise<void> {
 		try {
 			const config = await this.configManager.loadConfig()
-			
+
 			// 更新GitLab服务配置
 			this.gitLabService.updateConfig(config)
 
@@ -492,7 +508,7 @@ class MyProvider implements vscode.WebviewViewProvider {
 		try {
 			const config = await this.configManager.loadConfig()
 			const isConfigured = await this.configManager.isConfigured()
-			
+
 			// 测试连接状态
 			let isConnected = false
 			if (isConfigured) {
