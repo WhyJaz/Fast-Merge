@@ -39,7 +39,6 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
       getCommits(projectId, branch, '', 1, 20);
     }
   }, [projectId, branch, getCommits]);
-
   // 处理提交数据更新
   useEffect(() => {
     if (commitsState.data && !commitsState.loading) {
@@ -79,7 +78,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
   const filteredCommits = useMemo(() => {
     if (!allCommits || allCommits.length === 0) return [];
     if (!searchText) return allCommits;
-    return allCommits.filter(commit => 
+    return allCommits.filter(commit =>
       commit.title.toLowerCase().includes(searchText.toLowerCase()) ||
       commit.message.toLowerCase().includes(searchText.toLowerCase()) ||
       commit.id.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -92,10 +91,10 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
       <div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ 
+            <div title={`【${commit.short_id}】${commit.title}`} style={{
               fontWeight: 500,
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               marginBottom: 2
             }}>
@@ -115,10 +114,10 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
       {menu}
       {filteredCommits.length > 0 && !commitsState.loading && (
         <div style={{ padding: 8, borderTop: '1px solid #f0f0f0' }}>
-          <a 
+          <a
             onClick={handleLoadMore}
-            style={{ 
-              display: 'block', 
+            style={{
+              display: 'block',
               textAlign: 'center',
               color: '#1890ff',
               cursor: 'pointer'
@@ -152,21 +151,21 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
             <div style={{ marginTop: 8 }}>加载提交中...</div>
           </div>
         ) : !projectId ? (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="请先选择项目" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="请先选择项目"
             style={{ padding: 20 }}
           />
         ) : !branch ? (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="请先选择分支" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="请先选择分支"
             style={{ padding: 20 }}
           />
         ) : (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="未找到提交" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="未找到提交"
             style={{ padding: 20 }}
           />
         )

@@ -402,6 +402,7 @@ export const MergePage: React.FC = () => {
                       required
                     >
                       <BranchSelector
+                        allowClear={false}
                         projectId={selectedProject?.id}
                         value={sourceBranch}
                         onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
@@ -435,6 +436,7 @@ export const MergePage: React.FC = () => {
                       required
                     >
                       <BranchSelector
+                        allowClear={false}
                         projectId={selectedProject?.id}
                         value={sourceBranch}
                         onChange={(branch) => setSourceBranch(Array.isArray(branch) ? branch[0] : branch)}
@@ -544,19 +546,23 @@ export const MergePage: React.FC = () => {
                   size="large"
                   icon={<MergeOutlined />}
                   onClick={() => {
+                    // 清除之前的结果
+                    clearState('gitlab:getCommits');
+                    clearState('gitlab:createMergeRequest');
+                    clearState('gitlab:createCherryPickMR');
+
+
                     setSourceBranch(undefined); // 修复：添加清空源分支选择
                     // 目标分支
-                    setTargetBranch('test');
                     setSelectedCommits([]);
                     setSelectedCommitDetails([]);
-                    setTargetBranches(['test']);
+                    setTargetBranches([]);
+                    setTargetBranch('');
                     // MR标题
                     setMergeTitle('');
 
 
-                    // 清除之前的结果，准备显示新的merge request结果
-                    clearState('gitlab:createMergeRequest');
-                    clearState('gitlab:createCherryPickMR');
+
                     setShowResults(false);
 
                   }}

@@ -14,6 +14,7 @@ interface BranchSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   multiple?: boolean;
+  allowClear?: boolean;
 }
 
 export const BranchSelector: React.FC<BranchSelectorProps> = ({
@@ -22,7 +23,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   onChange,
   placeholder = "选择分支",
   disabled = false,
-  multiple = false
+  multiple = false,
+  allowClear = true
 }) => {
   const { getBranches, branchesState } = useGitLabApi();
   const [searchText, setSearchText] = useState('');
@@ -148,8 +150,9 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
 
   return (
     <Select
-      allowClear
+      allowClear={allowClear}
       showSearch
+      maxTagTextLength={50}
       mode={multiple ? "multiple" : undefined}
       value={value}
       placeholder={placeholder}
