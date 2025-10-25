@@ -64,7 +64,7 @@ body {
 }
 
 /* 表单样式 */
-.ant-form-item-label > label {
+.ant-form-item-label>label {
   color: var(--vscode-editor-foreground, #000000) !important;
 }
 
@@ -137,6 +137,15 @@ body {
   border-color: var(--vscode-button-secondaryBackground, #5a5d5e) !important;
   color: var(--vscode-button-secondaryForeground, #cccccc) !important;
 }
+.ant-btn-variant-outlined:disabled,
+.ant-btn-variant-dashed:disabled,
+.ant-btn-variant-outlined.ant-btn-disabled,
+.ant-btn-variant-dashed.ant-btn-disabled{
+  background: var(--vscode-button-secondaryBackground, #5a5d5e) !important;
+  border-color: var(--vscode-button-secondaryBackground, #5a5d5e) !important;
+  color: var(--vscode-button-secondaryForeground, #cccccc) !important;
+  opacity: 0.5;
+}
 
 /* 选择器下拉菜单 */
 .ant-select-dropdown {
@@ -176,7 +185,7 @@ body {
 }
 
 .ant-radio:hover .ant-radio-inner,
-.ant-radio-input:focus + .ant-radio-inner {
+.ant-radio-input:focus+.ant-radio-inner {
   border-color: var(--vscode-focusBorder, #007acc) !important;
 }
 
@@ -268,16 +277,85 @@ span.ant-typography-link {
   border: 1px solid var(--vscode-editorHoverWidget-border, #454545) !important;
 }
 
+
+.ant-tabs {
+  border-radius: 4px !important;
+  border: 1px solid var(--vscode-panel-border, #e8e8e8) !important;
+  background: var(--vscode-editor-background, #ffffff) !important;
+}
+
+.ant-tabs-nav {
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+}
+
+.ant-tabs-nav-list>.ant-tabs-tab:first-child {
+  margin-left: 16px;
+}
+
+
+.ant-tabs .ant-tabs-tab {
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+
+.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--vscode-editor-foreground, #d4d4d4) !important;
+  font-weight: bold;
+}
+
+.ant-tabs>.ant-tabs-nav::before {
+  border-bottom: 1px solid var(--vscode-panel-border, #e8e8e8) !important;
+}
+
+
+.ant-select .ant-select-arrow {
+  color: var(--vscode-input-foreground, #000000) !important
+}
+
+ .ant-table-wrapper .ant-table{
+  background: var(--vscode-editor-background, #ffffff) !important;
+ }
+ .ant-table-wrapper .ant-table-thead >tr>th{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+  border-bottom: 1px solid var(--vscode-panel-border, #e8e8e8) !important;
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+
+ }
+.ant-table-wrapper .ant-table-tbody >tr >td{
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+  border-bottom: 1px solid var(--vscode-panel-border, #e8e8e8) !important;
+}
+.ant-table-wrapper .ant-table-tbody >tr >td .ant-btn-variant-text{
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-table-tbody >tr >td.ant-table-cell-row-hover{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+}
+.ant-table-wrapper .ant-table-thead >tr>th:not(:last-child)::before{
+  background-color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-table-tbody>tr.ant-table-placeholder{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-table-tbody>tr.ant-table-placeholder:hover>td{
+  background: var(--vscode-titleBar-activeBackground, #f8f8f8) !important;
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+.ant-table-wrapper .ant-empty-normal .ant-empty-description{
+  color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .ant-card {
     margin: 0px !important;
   }
-  
+
   .ant-layout-content {
     padding: 8px !important;
   }
 }
+
 
 /* 暗色主题支持 */
 @media (prefers-color-scheme: dark) {
@@ -285,29 +363,34 @@ span.ant-typography-link {
     background-color: var(--vscode-editor-background, #1e1e1e);
     color: var(--vscode-editor-foreground, #d4d4d4);
   }
-  
-  
+
+
   /* 确保暗色主题下的文字可见性 */
   .ant-radio-wrapper,
   .ant-radio-wrapper:hover,
   .ant-radio-wrapper span:last-child {
     color: var(--vscode-editor-foreground, #d4d4d4) !important;
   }
-  
+
   .ant-input::placeholder,
   .ant-select-selector .ant-select-selection-placeholder,
   .ant-select-selection-placeholder,
   .ant-select-multiple .ant-select-selection-placeholder {
     color: var(--vscode-input-placeholderForeground, #8c8c8c) !important;
   }
-  
-  .ant-form-item-label > label {
+
+  .ant-form-item-label>label {
     color: var(--vscode-editor-foreground, #d4d4d4) !important;
   }
+
+
+
 }
 
-:where(.css-dev-only-do-not-override-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item{
+:where(.css-dev-only-do-not-override-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item {
   color: inherit;
 }
-:where(.css-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item{
-  color: inherit }
+
+:where(.css-l9pxc0).ant-select-single.ant-select-open .ant-select-selection-item {
+  color: inherit
+}

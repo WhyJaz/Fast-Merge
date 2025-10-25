@@ -13,6 +13,15 @@ interface ProjectSelectorProps {
   placeholder?: string;
   disabled?: boolean;
 }
+export const getName = (data: any) => {
+  if (data.name_with_namespace.includes('front')) {
+    return '前端-' + data.name
+  } else if (data.name_with_namespace.includes('back')) {
+    return '后端-' + data.name
+  }
+  return data.name
+}
+
 
 export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   value,
@@ -32,8 +41,8 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   useEffect(() => {
     if ((value as any)?.needInit && allProjects.length) {
       const findProject = allProjects?.find(project => project.path_with_namespace === (value as any).gitlabProjectPath) || {};
-      onChange?.({...findProject, needInit: false} as any);
-    } 
+      onChange?.({ ...findProject, needInit: false } as any);
+    }
   }, [value, allProjects]);
 
   // 处理项目数据更新
@@ -66,7 +75,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   // 过滤选项
   const filteredProjects = useMemo(() => {
     if (!searchText) return allProjects;
-    return allProjects.filter(project => 
+    return allProjects.filter(project =>
       project.name_with_namespace.toLowerCase().includes(searchText.toLowerCase()) ||
       project.name.toLowerCase().includes(searchText.toLowerCase())
     );
@@ -78,14 +87,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
     </div>
   );
 
-  const getName = (data: any) => {
-    if (data.name_with_namespace.includes('front')) {
-      return '前端-' +  data.name
-    } else if (data.name_with_namespace.includes('back')) {
-      return '后端-' +  data.name
-    }
-    return data.name
-  }
+
 
   return (
     <Select
@@ -106,9 +108,9 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
             <div style={{ marginTop: 8 }}>加载中...</div>
           </div>
         ) : (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="未找到项目" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="未找到项目"
             style={{ padding: 20 }}
           />
         )
@@ -119,20 +121,20 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <GitlabOutlined style={{ marginRight: 8, color: '#FC6D26' }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ 
-                fontWeight: 500, 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
-                whiteSpace: 'nowrap' 
+              <div style={{
+                fontWeight: 500,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
               }}>
                 {getName(project)}
               </div>
-              {/* <Text 
-                type="secondary" 
-                style={{ 
+              {/* <Text
+                type="secondary"
+                style={{
                   fontSize: '12px',
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   display: 'block'
                 }}

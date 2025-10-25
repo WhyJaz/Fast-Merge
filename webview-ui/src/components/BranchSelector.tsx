@@ -14,6 +14,7 @@ interface BranchSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   multiple?: boolean;
+  allowClear?: boolean;
 }
 
 export const BranchSelector: React.FC<BranchSelectorProps> = ({
@@ -22,7 +23,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   onChange,
   placeholder = "选择分支",
   disabled = false,
-  multiple = false
+  multiple = false,
+  allowClear = true
 }) => {
   const { getBranches, branchesState } = useGitLabApi();
   const [searchText, setSearchText] = useState('');
@@ -55,8 +57,8 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   const filteredBranches = useMemo(() => {
     if (!branchesState.data) return [];
     if (!searchText) return branchesState.data;
-    
-    return branchesState.data.filter(branch => 
+
+    return branchesState.data.filter(branch =>
       branch.name.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [branchesState.data, searchText]);
@@ -65,17 +67,17 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
   const compareVersions = (versionA: string, versionB: string): number => {
     const partsA = versionA.split('.').map(part => parseInt(part, 10) || 0);
     const partsB = versionB.split('.').map(part => parseInt(part, 10) || 0);
-    
+
     const maxLength = Math.max(partsA.length, partsB.length);
-    
+
     for (let i = 0; i < maxLength; i++) {
       const partA = partsA[i] || 0;
       const partB = partsB[i] || 0;
-      
+
       if (partA > partB) return -1; // 降序排列，大版本在前
       if (partA < partB) return 1;
     }
-    
+
     return 0;
   };
 
@@ -92,29 +94,29 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
       // 默认分支优先
       if (a.default && !b.default) return -1;
       if (!a.default && b.default) return 1;
-      
+
       // 保护分支且以test或hotfix开头的排在最前面
       const aIsProtectedTestHotfix = a.protected && (a.name.startsWith('test') || a.name.startsWith('hotfix'));
       const bIsProtectedTestHotfix = b.protected && (b.name.startsWith('test') || b.name.startsWith('hotfix'));
-      
+
       if (aIsProtectedTestHotfix && !bIsProtectedTestHotfix) return -1;
       if (!aIsProtectedTestHotfix && bIsProtectedTestHotfix) return 1;
-      
+
       // 如果都是hotfix分支，按版本号排序
-      if (aIsProtectedTestHotfix && bIsProtectedTestHotfix && 
-          a.name.startsWith('hotfix') && b.name.startsWith('hotfix')) {
+      if (aIsProtectedTestHotfix && bIsProtectedTestHotfix &&
+        a.name.startsWith('hotfix') && b.name.startsWith('hotfix')) {
         const versionA = extractHotfixVersion(a.name);
         const versionB = extractHotfixVersion(b.name);
-        
+
         if (versionA && versionB) {
           return compareVersions(versionA, versionB);
         }
       }
-      
+
       // 其他保护分支其次
       if (a.protected && !b.protected) return -1;
       if (!a.protected && b.protected) return 1;
-      
+
       // 字母顺序
       return a.name.localeCompare(b.name);
     });
@@ -126,10 +128,10 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
           <BranchesOutlined style={{ marginRight: 8, color: '#52c41a' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ 
+            <div style={{
               fontWeight: branch.default ? 600 : 400,
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               display: 'flex',
               alignItems: 'center',
@@ -148,7 +150,9 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
 
   return (
     <Select
+      allowClear={allowClear}
       showSearch
+      maxTagTextLength={50}
       mode={multiple ? "multiple" : undefined}
       value={value}
       placeholder={placeholder}
@@ -165,15 +169,15 @@ export const BranchSelector: React.FC<BranchSelectorProps> = ({
             <div style={{ marginTop: 8 }}>加载分支中...</div>
           </div>
         ) : !projectId ? (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="请先选择项目" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="请先选择项目"
             style={{ padding: 20 }}
           />
         ) : (
-          <Empty 
-            image={Empty.PRESENTED_IMAGE_SIMPLE} 
-            description="未找到分支" 
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="未找到分支"
             style={{ padding: 20 }}
           />
         )
