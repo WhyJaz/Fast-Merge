@@ -35,7 +35,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 
   // 初始加载项目 - 加载更多数据避免分页
   useEffect(() => {
-    getProjects('', 1, 200);
+    getProjects('', 1, 100);
   }, [getProjects]);
 
   useEffect(() => {
@@ -52,10 +52,16 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
     }
   }, [projectsState.data, projectsState.loading]);
 
-  // 搜索处理 - 从已加载数据中筛选，不重新调用接口
+  // 搜索处理 - 调用接口进行服务端搜索
   const handleSearch = (value: string) => {
     setSearchText(value);
-    // 不再重新调用接口，只更新搜索文本，让filteredProjects自动筛选
+    // 调用接口进行搜索，支持GitLab服务端搜索
+    if (value.trim()) {
+      getProjects(value, 1, 100);
+    } else {
+      // 如果搜索为空，重新加载全部项目
+      getProjects('', 1, 100);
+    }
   };
 
 
