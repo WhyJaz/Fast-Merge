@@ -348,6 +348,7 @@ export const MergePage: React.FC = () => {
             layout="horizontal"
             labelCol={{ flex: '100px' }}
             wrapperCol={{ flex: '1 1 0' }}
+            className='configForm'
           >
             <Row gutter={16}>
               <Col span={24}>
@@ -454,6 +455,7 @@ export const MergePage: React.FC = () => {
                       <div style={{ display: 'flex', width: '100%', maxWidth: '100%' }}>
                         <div style={{ flex: '1 1 0', minWidth: 0, marginRight: 8 }}>
                           <CommitSelector
+                            showHash={configInfo?.showHash}
                             projectId={selectedProject?.id}
                             branch={sourceBranch}
                             value={selectedCommits}

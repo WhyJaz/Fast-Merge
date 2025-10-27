@@ -3,6 +3,7 @@ import { vscode } from '../utils/vscode';
 
 interface ConfigInfo {
   baseUrl?: string;
+  showHash?: boolean;
   isConnected?: boolean;
   loading: boolean;
 }
@@ -19,6 +20,7 @@ export const useConfig = () => {
       if (message.type === 'config:info') {
         setConfigInfo({
           baseUrl: message.baseUrl,
+          showHash: message.showHash || false,
           isConnected: message.isConnected,
           loading: false
         });

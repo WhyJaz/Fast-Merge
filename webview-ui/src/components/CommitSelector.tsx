@@ -15,6 +15,7 @@ interface CommitSelectorProps {
   placeholder?: string;
   disabled?: boolean;
   maxTagCount?: number;
+  showHash?: boolean;
 }
 
 export const CommitSelector: React.FC<CommitSelectorProps> = ({
@@ -24,6 +25,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
   onChange,
   placeholder = "选择提交",
   disabled = false,
+  showHash = false,
   maxTagCount = 2
 }) => {
   const { getCommits, commitsState } = useGitLabApi();
@@ -91,16 +93,17 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
       <div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div title={`【${commit.short_id}】${commit.title}`} style={{
+            <div title={commit.title} style={{
               fontWeight: 500,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
               marginBottom: 2
             }}>
-              {/* <Tag color="green" style={{ margin: 0, fontSize: '11px' }}>
-                {commit.short_id}
-              </Tag> */}
+              {showHash &&
+                <Tag style={{ marginRight: 6, fontSize: '10px' }}>
+                  {commit.short_id}
+                </Tag>}
               {commit.title}
             </div>
           </div>

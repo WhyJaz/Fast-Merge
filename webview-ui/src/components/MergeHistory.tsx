@@ -82,15 +82,19 @@ export const MergeHistory: React.FC<MergeHistoryProps> = ({
                     key={last_target_branch}
                     color={success ? 'green' : 'red'}
                   >
-                    {last_target_branch}
+                    {/* 分支截取一下，避免显示太长 */}
+                    <span
+                      {...last_target_branch.length > 40 ? { title: last_target_branch } : {}}
+                    >{last_target_branch.slice(0, 40)}</span>
                     {web_url && <Link style={{ marginLeft: 8 }} href={web_url + '/diffs'} target="_blank">
                       <LinkOutlined />
                     </Link>}
                   </Tag>
                 </Space>
               )
-            })}
-          </Space>
+            })
+            }
+          </Space >
         )
       }
     },
@@ -101,6 +105,7 @@ export const MergeHistory: React.FC<MergeHistoryProps> = ({
   return (
     <div>
       <Table
+        rowKey={'timestamp'}
         scroll={{ x: true }}
         columns={columns}
         dataSource={submittingHistory}
