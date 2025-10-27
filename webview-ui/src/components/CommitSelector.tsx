@@ -93,7 +93,7 @@ export const CommitSelector: React.FC<CommitSelectorProps> = ({
       <div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div title={commit.title} style={{
+            <div title={`【${commit.short_id}】${commit.title}`} style={{
               fontWeight: 500,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
