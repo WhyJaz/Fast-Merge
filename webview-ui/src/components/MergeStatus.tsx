@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Typography, Space, Button, Tag, Table, message, Popconfirm, Tooltip } from 'antd';
-import { 
-  CheckCircleOutlined, 
-  ExclamationCircleOutlined, 
+import {
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
   LinkOutlined,
   BranchesOutlined,
   NodeIndexOutlined,
@@ -22,6 +22,7 @@ interface MergeStatusProps {
   cherryPickResults?: CherryPickResult[];
   loading?: boolean;
   projectId?: number;
+  configInfo?: Record<string, any>;
 }
 
 export const MergeStatus: React.FC<MergeStatusProps> = ({
@@ -50,7 +51,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     const mrKey = `${projectId}-${mergeRequestIid}`;
     setClosingMrId(mrKey);
     setConfirmVisible(null);
-    
+
     try {
       await closeMergeRequest(projectId, mergeRequestIid, tempBranchName);
     } catch (error) {
@@ -86,9 +87,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   if (loading) {
     return (
       <div style={{ marginTop: 16, textAlign: 'center', padding: 20 }}>
-        <BranchesOutlined 
-          style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} 
-          spin 
+        <BranchesOutlined
+          style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }}
+          spin
         />
         <div style={{ fontSize: '16px', fontWeight: 600, margin: '8px 0' }}>合并进行中...</div>
         <Text type="secondary">
@@ -105,17 +106,17 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   // 准备表格数据
   const getTableData = () => {
     const data: any[] = [];
-    
+
     // 处理普通合并请求结果
     if (mergeResult) {
       const mr = mergeResult.merge_request as any;
       const isConflictCheckCompleted = mr?.conflictCheckStatus === 'completed';
-      const hasConflicts = isConflictCheckCompleted ? 
-        (mr?.detailed_merge_status === 'conflict' || 
-         mr?.merge_status === 'cannot_be_merged' ||
-         mr?.detailed_merge_status === 'cannot_be_merged') : 
+      const hasConflicts = isConflictCheckCompleted ?
+        (mr?.detailed_merge_status === 'conflict' ||
+          mr?.merge_status === 'cannot_be_merged' ||
+          mr?.detailed_merge_status === 'cannot_be_merged') :
         null; // 如果还没校验完成，显示为null
-      
+
       // 添加调试日志
       if (isConflictCheckCompleted) {
         console.log('DEBUG: 冲突状态判断', {
@@ -127,7 +128,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           hasConflicts: hasConflicts
         });
       }
-      
+
       data.push({
         key: 'merge-result',
         type: 'Branch Merge',
@@ -135,8 +136,8 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         targetBranch: mr?.target_branch || '-',
         title: mr?.title || '-',
         status: mergeResult.success ? '成功' : '失败',
-        conflictStatus: isConflictCheckCompleted ? 
-          (hasConflicts ? '有冲突' : '无冲突') : 
+        conflictStatus: isConflictCheckCompleted ?
+          (hasConflicts ? '有冲突' : '无冲突') :
           '校验中',
         isConflictChecking: !isConflictCheckCompleted,
         mrId: mr?.iid,
@@ -146,18 +147,18 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         message: mergeResult.message || mergeResult.error
       });
     }
-    
+
     // 处理Cherry Pick结果
     if (cherryPickResults && cherryPickResults.length > 0) {
       cherryPickResults.forEach((result, index) => {
         const mr = result.merge_request as any;
         const isConflictCheckCompleted = mr?.conflictCheckStatus === 'completed';
-        const hasConflicts = isConflictCheckCompleted ? 
-          (mr?.detailed_merge_status === 'conflict' || 
-           mr?.merge_status === 'cannot_be_merged' ||
-           mr?.detailed_merge_status === 'cannot_be_merged') : 
+        const hasConflicts = isConflictCheckCompleted ?
+          (mr?.detailed_merge_status === 'conflict' ||
+            mr?.merge_status === 'cannot_be_merged' ||
+            mr?.detailed_merge_status === 'cannot_be_merged') :
           null;
-        
+
         data.push({
           key: `cherry-pick-${index}`,
           type: 'Cherry Pick',
@@ -165,8 +166,8 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           targetBranch: result.target_branch,
           title: mr?.title || '-',
           status: result.success ? '成功' : '失败',
-          conflictStatus: isConflictCheckCompleted ? 
-            (hasConflicts ? '有冲突' : '无冲突') : 
+          conflictStatus: isConflictCheckCompleted ?
+            (hasConflicts ? '有冲突' : '无冲突') :
             '校验中',
           isConflictChecking: !isConflictCheckCompleted,
           mrId: mr?.iid,
@@ -177,7 +178,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         });
       });
     }
-    
+
     return data;
   };
 
@@ -189,7 +190,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       key: 'targetBranch',
       render: (branch: string, record: any) => (
         <Space>
-          <Tag 
+          <Tag
             color={record.status === '成功' ? 'green' : 'red'}
           >
             {branch}
@@ -211,7 +212,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       key: 'conflictStatus',
       render: (status: string, record: any) => {
         if (!record.mrUrl) return <span style={{ color: '#999' }}>-</span>;
-        
+
         if (record.isConflictChecking) {
           return (
             <Space>
@@ -237,9 +238,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
           <Link href={url + '/diffs'} target="_blank">
             <LinkOutlined /> #{record.mrId}
           </Link>
-          <Button 
-            type="text" 
-            size="small" 
+          <Button
+            type="text"
+            size="small"
             icon={<CopyOutlined />}
             onClick={() => copyMRLink(url)}
             title="复制MR链接"
@@ -257,16 +258,16 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         const mrKey = `${record.projectId || 0}-${record.mrId}`;
         const isClosed = closedMrIds.has(mrKey);
         const isClosing = closingMrId === mrKey;
-        
+
         if (!record.mrUrl || record.status !== '成功') {
           return null;
         }
-        
+
         if (isClosed) {
           return (
-            <Button 
-              type="text" 
-              size="small" 
+            <Button
+              type="text"
+              size="small"
               disabled
               style={{ color: '#999' }}
             >
@@ -274,7 +275,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             </Button>
           );
         }
-        
+
         return (
           <Popconfirm
             title="确认关闭合并请求"
@@ -286,9 +287,9 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             okButtonProps={{ danger: true }}
             open={confirmVisible === mrKey}
           >
-            <Button 
-              type="link" 
-              size="small" 
+            <Button
+              type="link"
+              size="small"
               icon={<CloseOutlined />}
               onClick={() => showConfirm(mrKey)}
               loading={isClosing}
@@ -316,7 +317,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             失败: {failureCount}
           </Tag>
         </Space>
-        <Button 
+        <Button
           icon={<CopyOutlined />}
           onClick={async () => {
             const urls = tableData
@@ -338,6 +339,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
         </Button>
       </div>
       <Table
+        rowKey={'targetBranch'}
         columns={columns}
         dataSource={tableData}
         pagination={false}

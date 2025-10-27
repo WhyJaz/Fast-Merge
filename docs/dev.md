@@ -9,3 +9,6 @@
 ## 插件打包
 安装打包工具 npm i -g vsce
 打包插件：vsce package
+
+# css变量 参考文档
+https://liiked.github.io/VS-Code-Extension-Doc-ZH/#/references/theme-color

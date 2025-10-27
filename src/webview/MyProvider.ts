@@ -522,7 +522,9 @@ class MyProvider implements vscode.WebviewViewProvider {
 
 			this.view?.webview.postMessage({
 				type: 'config:info',
-				baseUrl: config.gitlab.baseUrl,
+				// baseUrl: config.gitlab.baseUrl,
+				// 配置里面的都拿过来
+				...config.gitlab,
 				isConnected,
 				isConfigured
 			})
