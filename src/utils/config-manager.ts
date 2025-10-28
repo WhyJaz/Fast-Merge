@@ -11,7 +11,8 @@ export const DEFAULT_CONFIG: FastMergeConfig = {
   gitlab: {
     baseUrl: 'https://gitlab.xxxx.com',
     token: '',
-    projectId: undefined
+    projectId: undefined,
+    showHash: false
   }
 };
 
@@ -55,10 +56,14 @@ export class ConfigManager {
       }
 
       const configContent = await fs.promises.readFile(this.configPath, 'utf-8');
-      const config = JSON.parse(configContent) as FastMergeConfig;
-      
-      // 合并默认配置，确保所有字段都存在
-      return this.mergeWithDefaults(config);
+      const config = JSON.parse(configContent) as Partial<FastMergeConfig>;
+
+      // 合并默认配置，确保所有字段都存在，并在缺失字段时回写
+      const merged = this.mergeWithDefaults(config);
+      if (JSON.stringify(merged) !== JSON.stringify(config)) {
+        await this.saveConfig(merged);
+      }
+      return merged;
     } catch (error) {
       console.error('读取配置文件失败:', error);
       vscode.window.showErrorMessage(`读取配置文件失败: ${error}`);

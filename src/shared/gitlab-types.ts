@@ -111,6 +111,8 @@ export interface GitLabConfiguration {
 	baseUrl: string
 	token: string
 	projectId?: number
+	[key: string]: any
+	showHash?: boolean
 }
 
 export interface MergeRequestOptions {

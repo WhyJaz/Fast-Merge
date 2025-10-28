@@ -530,22 +530,21 @@ export const MergePage: React.FC = () => {
                 </Form.Item>
               </Col>
             </Row>
-            <Form.Item style={{ marginBottom: 16, textAlign: 'center' }}>
+            <Form.Item style={{ margin: '16px 0', textAlign: 'center' }}>
               <Space>
                 <Button
                   type="primary"
-                  size="large"
+                  size="middle"
                   icon={<MergeOutlined />}
                   onClick={handleSubmit}
                   disabled={!canSubmit()}
                   loading={isSubmitting}
-                  style={{ minWidth: 200 }}
                 >
                   {isSubmitting ? '创建合并请求中...' : '创建合并请求'}
                 </Button>
                 <Button
                   type="default"
-                  size="large"
+                  size="middle"
                   icon={<MergeOutlined />}
                   onClick={() => {
                     // 清除之前的结果
@@ -569,7 +568,7 @@ export const MergePage: React.FC = () => {
 
                   }}
                   disabled={isSubmitting}
-                  style={{ minWidth: 100 }}
+                  style={{ minWidth: 100, marginLeft: '20px' }}
                 >重置</Button>
               </Space>
             </Form.Item>
