@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Typography, Space, Button, Tag, Table, message, Popconfirm, Tooltip } from 'antd';
+import { Typography, Space, Button, Tag, Table, message, Popconfirm, Tooltip, Dropdown } from 'antd';
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import { MergeResult, CherryPickResult } from '../types/gitlab';
 import { useGitLabApi } from '../hooks/useGitLabApi';
+import { vscode } from '@/utils/vscode';
 
 // 移除自定义CSS动画，使用Antd内置的LoadingOutlined图标
 
@@ -305,6 +306,25 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
   const tableData = getTableData();
   const successCount = tableData.filter(item => item.status === '成功').length;
   const failureCount = tableData.length - successCount;
+  const items = [
+    {
+      key: 'openExternalLink',
+      label: '打开全部链接',
+    },
+  ];
+
+  // 批量打开全部链接
+  const onMenuClick: any = async (e: any) => {
+    tableData
+      .filter(item => item.mrUrl && item.status === '成功')
+      .map(item => {
+        item.mrUrl && vscode.postMessage(
+          { type: 'openExternalLink', url: item.mrUrl + '/diffs' },
+        );
+      });
+
+  };
+
   return (
     <div style={{ marginTop: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -317,27 +337,27 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             失败: {failureCount}
           </Tag>
         </Space>
-        <Button
-          icon={<CopyOutlined />}
-          onClick={async () => {
-            const urls = tableData
-              .filter(item => item.mrUrl && item.status === '成功')
-              .map(item => item.mrUrl)
-              .join('\n');
-            if (urls) {
-              try {
-                await navigator.clipboard.writeText(urls);
-                message.success('所有成功的MR链接已复制');
-              } catch (err) {
-                message.error('复制失败，请手动复制');
+        <div>
+          <Dropdown.Button
+            onClick={async () => {
+              const urls = tableData
+                .filter(item => item.mrUrl && item.status === '成功')
+                .map(item => item.mrUrl)
+                .join('\n');
+              if (urls) {
+                try {
+                  await navigator.clipboard.writeText(urls);
+                  message.success('所有成功的MR链接已复制');
+                } catch (err) {
+                  message.error('复制失败，请手动复制');
+                }
               }
-            }
-          }}
-          disabled={successCount === 0}
-        >
-          复制所有链接
-        </Button>
-      </div>
+            }}
+            disabled={successCount === 0}
+            menu={{ items, onClick: onMenuClick }}>
+            复制所有链接
+          </Dropdown.Button>
+        </div></div>
       <Table
         rowKey={'targetBranch'}
         columns={columns}

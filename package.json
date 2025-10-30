@@ -2,7 +2,7 @@
 	"name": "fast-merge",
 	"displayName": "合并助手",
 	"description": "你的代码合并助手，大幅提升你的合并效率",
-	"version": "2.0.5",
+	"version": "2.0.6",
 	"icon": "assets/icons/icon.png",
 	"galleryBanner": {
 		"color": "#2C3E50",
