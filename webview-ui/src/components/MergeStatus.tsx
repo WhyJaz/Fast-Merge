@@ -236,7 +236,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
       key: 'mrUrl',
       render: (url: string, record: any) => url ? (
         <Space>
-          <Link href={url + '/diffs'} target="_blank">
+          <Link id={record.targetBranch + '_linkhandler'} href={url + '/diffs'} target="_blank">
             <LinkOutlined /> #{record.mrId}
           </Link>
           <Button
@@ -246,6 +246,7 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
             onClick={() => copyMRLink(url)}
             title="复制MR链接"
           />
+          {/* <a style={{ display: "none" }} id={record.targetBranch + '_linkhandler'} href={url + '/diffs'} target="_blank">模拟穿透dom节点</a> */}
         </Space>
       ) : (
         <span style={{ color: '#999' }}>创建失败</span>
@@ -318,12 +319,38 @@ export const MergeStatus: React.FC<MergeStatusProps> = ({
     tableData
       .filter(item => item.mrUrl && item.status === '成功')
       .map(item => {
-        item.mrUrl && vscode.postMessage(
-          { type: 'openExternalLink', url: item.mrUrl + '/diffs' },
-        );
+        if (item.mrUrl) {
+          // 使用a标记触发跳转，避免弹出提示打开外部网站
+          const domId = item.targetBranch + '_linkhandler';
+          const dom = document.getElementById(domId);
+          dom && dom.click();
+          // 使用原生api
+          // item.mrUrl && vscode.postMessage(
+          //   { type: 'openExternalLink', url: item.mrUrl + '/diffs' },
+          // );
+        }
       });
 
   };
+
+
+  //   [
+  //     {
+  //         "key": "cherry-pick-0",
+  //         "type": "Cherry Pick",
+  //         "sourceBranch": "-",
+  //         "targetBranch": "release/5.8-release_20251108",
+  //         "title": "V8-222476【prod】：菜单导航-文字设置，设置圆角尺寸，设计态非一级菜单，圆角尺寸设置不生效",
+  //         "status": "成功",
+  //         "conflictStatus": "校验中",
+  //         "isConflictChecking": true,
+  //         "mrId": 3807,
+  //         "mrUrl": "http://gitlab.seeyon.com/a9/code/frontend/apps/portal/-/merge_requests/3807",
+  //         "projectId": 870,
+  //         "tempBranchName": "cherry-pick-1761893341049-8fi0bzudq-release/5.8-release_20251108",
+  //         "message": "成功创建 Cherry-pick 合并请求到分支 release/5.8-release_20251108"
+  //     }
+  // ]
 
   return (
     <div style={{ marginTop: 16 }}>
