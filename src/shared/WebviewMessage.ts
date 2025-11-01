@@ -3,11 +3,12 @@ import { GitLabProject, GitLabBranch, GitLabCommit, MergeRequestOptions, CherryP
 export interface WebviewMessage {
 	type: string
 	message?: any
+	url?: string
 }
 
 // GitLab 相关消息类型
 export interface GitLabMessage extends WebviewMessage {
-	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:closeMergeRequest' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate'
+	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:closeMergeRequest' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate' | 'openExternalLink'
 }
 
 // 配置相关消息类型
@@ -105,6 +106,12 @@ export interface ResponseMessage extends WebviewMessage {
 	}
 }
 
+
+export interface openExternalMessage extends GitLabMessage {
+	type: 'openExternalLink'
+	url: string
+}
+
 export type AllWebviewMessages =
 	| WebviewMessage
 	| GetProjectsMessage
@@ -117,4 +124,5 @@ export type AllWebviewMessages =
 	| SetConfigurationMessage
 	| ConflictStatusUpdateMessage
 	| ConfigMessage
-	| ResponseMessage;
+	| ResponseMessage
+	| openExternalMessage;

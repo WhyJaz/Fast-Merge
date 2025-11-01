@@ -231,6 +231,10 @@ class MyProvider implements vscode.WebviewViewProvider {
 				case "config:getInfo":
 					await this.sendConfigInfo()
 					break
+				case "openExternalLink":
+					// 调用系统浏览器打开链接
+					message?.url && vscode.env.openExternal(vscode.Uri.parse(message.url));
+					break
 
 				default:
 					console.warn('未知消息类型:', message.type)
