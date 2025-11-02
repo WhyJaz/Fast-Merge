@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Typography, Space, Button, Tag, Table, message, Popconfirm, Tooltip } from 'antd';
+import { Space, Table, Tag, Typography } from 'antd';
+import React from 'react';
 const { Link } = Typography;
 
+import { padZero } from '@/utils/index';
 import {
   LinkOutlined,
 } from '@ant-design/icons';
-import { padZero } from '@/pages/MergePage';
 
 /**
  * 时间戳转换为 YYYY/MM/DD HH:MM:SS 格式
@@ -30,11 +30,10 @@ function timestampToFormat(timestamp: any) {
 }
 
 
-
 interface MergeHistoryProps {
 }
 
-export const MergeHistory: React.FC<MergeHistoryProps> = ({
+const MergeHistory: React.FC<MergeHistoryProps> = ({
 }) => {
 
   // 表格列定义
@@ -116,3 +115,5 @@ export const MergeHistory: React.FC<MergeHistoryProps> = ({
     </div>
   );
 };
+
+export default MergeHistory;
