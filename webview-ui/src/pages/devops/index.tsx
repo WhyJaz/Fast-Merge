@@ -2,7 +2,7 @@ import React from 'react'
 
 const DevopsPage = () => {
   return (
-    <div>Devops</div>
+    <div>Devops功能待实现</div>
   )
 }
 
