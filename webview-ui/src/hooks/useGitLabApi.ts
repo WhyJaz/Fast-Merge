@@ -12,6 +12,7 @@ import {
 	GitLabConfiguration,
 	ResponseMessage,
 } from "../types/gitlab"
+import { MergeRequestsType } from "../../../src/api/gitlab-service"
 
 interface ApiResponse<T> {
 	options?: any
@@ -26,7 +27,7 @@ export const useGitLabApi = () => {
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent) => {
-			const message = event.data as any
+			const message = event.data as any;
 			if (message.type === "response") {
 				const { requestType, success, data, error, options } = message.message
 				// debugger
@@ -111,7 +112,7 @@ export const useGitLabApi = () => {
 			const response = responses.get(requestType)
 			const isLoading = loading.get(requestType) || false
 
-			// console.log("response", response, response?.options)
+			// console.log("response", requestType, response, response?.options)
 
 			return {
 				loading: isLoading,
@@ -143,6 +144,14 @@ export const useGitLabApi = () => {
 	const getCommits = useCallback(
 		(projectId: number, branch: string, search?: string, page?: number, perPage?: number) => {
 			sendRequest("gitlab:getCommits", { projectId, branch, search, page, perPage })
+		},
+		[sendRequest],
+	)
+
+	// 获取commit信息
+	const getMergeRequests = useCallback(
+		(projectId: number, state: MergeRequestsType, page?: number, perPage?: number) => {
+			sendRequest("gitlab:getMergeRequests", { projectId, state, page, perPage })
 		},
 		[sendRequest],
 	)
@@ -212,6 +221,7 @@ export const useGitLabApi = () => {
 		getProjects,
 		getBranches,
 		getCommits,
+		getMergeRequests,
 		createMergeRequest,
 		createCherryPickMR,
 		closeMergeRequest,
@@ -222,6 +232,7 @@ export const useGitLabApi = () => {
 		projectsState: getApiState<GitLabProject[]>("gitlab:getProjects"),
 		branchesState: getApiState<GitLabBranch[]>("gitlab:getBranches"),
 		commitsState: getApiState<GitLabCommit[]>("gitlab:getCommits"),
+		mergeRequestListState: getApiState<GitLabCommit[]>("gitlab:getMergeRequests"),
 		mergeRequestState: getApiState<MergeResult>("gitlab:createMergeRequest"),
 		cherryPickState: getApiState<CherryPickResult[]>("gitlab:createCherryPickMR"),
 		closeMergeRequestState: getApiState<any>("gitlab:closeMergeRequest"),

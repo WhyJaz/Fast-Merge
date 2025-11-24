@@ -8,8 +8,9 @@ const { Option } = Select;
 const { Text } = Typography;
 
 interface ProjectSelectorProps {
-  value?: GitLabProject;
-  onChange?: (project: GitLabProject | undefined) => void;
+  multiple?: boolean;
+  value?: GitLabProject | GitLabProject[];
+  onChange?: (project: GitLabProject | GitLabProject[] | undefined) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -24,6 +25,7 @@ export const getName = (data: any) => {
 
 
 export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
+  multiple = false,
   value,
   onChange,
   placeholder = "选择 GitLab 项目",
@@ -39,9 +41,11 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   }, [getProjects]);
 
   useEffect(() => {
-    if ((value as any)?.needInit && allProjects.length) {
-      const findProject = allProjects?.find(project => project.path_with_namespace === (value as any).gitlabProjectPath) || {};
-      onChange?.({ ...findProject, needInit: false } as any);
+    if (!Array.isArray(value)) {
+      if ((value as any)?.needInit && allProjects.length) {
+        const findProject = allProjects?.find(project => project.path_with_namespace === (value as any).gitlabProjectPath) || {};
+        onChange?.({ ...findProject, needInit: false } as any);
+      }
     }
   }, [value, allProjects]);
 
@@ -68,8 +72,15 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 
   // 选择项目
   const handleSelect = (projectId: string) => {
-    const selectedProject = allProjects.find(p => p.id.toString() === projectId);
-    onChange?.(selectedProject);
+    if (!multiple) {
+      const selectedProject = allProjects.find(p => p.id.toString() === projectId);
+      onChange?.(selectedProject);
+    } else {
+      const selectedProject = allProjects.find(p => p.id.toString() === projectId);
+      const selectedProjects: any = [...(Array.isArray(value) ? value : []), selectedProject];
+      onChange?.(selectedProjects);
+    }
+
   };
 
   // 过滤选项
@@ -88,11 +99,22 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   );
 
 
+  const selectValue: any = useMemo(() => {
+    if (!value) return undefined;
+    if (Array.isArray(value) && multiple) {
+      return value?.map((item: any) => item.id.toString())
+    } else {
+      return value?.id?.toString()
+    }
+  }, [multiple, value])
+
+
 
   return (
     <Select
+      {...(multiple ? { mode: "multiple" } : {})}
       showSearch
-      value={value?.id?.toString()}
+      value={selectValue}
       placeholder={placeholder}
       disabled={disabled}
       loading={projectsState.loading}

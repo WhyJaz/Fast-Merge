@@ -3,7 +3,7 @@ import { WebviewMessage, AllWebviewMessages, ResponseMessage } from "../shared/W
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 import { LOCAL_PORT } from "../shared/constant"
-import { GitLabService } from "../api/gitlab-service"
+import { GitLabService, MergeRequestsType } from "../api/gitlab-service"
 import { GitUtils } from "../utils/git-utils"
 import { ConfigManager } from "../utils/config-manager"
 
@@ -192,6 +192,10 @@ class MyProvider implements vscode.WebviewViewProvider {
 					await this.handleGetBranches(message.message)
 					break
 
+				case "gitlab:getMergeRequests":
+					await this.handleGetMergeRequests(message.message)
+					break
+
 				case "gitlab:getCommits":
 					await this.handleGetCommits(message.message)
 					break
@@ -294,6 +298,18 @@ class MyProvider implements vscode.WebviewViewProvider {
 
 		} catch (error: any) {
 			this.sendResponse({ requestType: 'gitlab:getCommits', success: false, data: null, error: error.message })
+
+		}
+	}
+
+
+	// 处理mr列表
+	private async handleGetMergeRequests(params: { projectId: number; state: MergeRequestsType, page?: number; perPage?: number }): Promise<void> {
+		try {
+			const mergeRequests = await this.gitLabService.getMergeRequests(params.projectId, params?.state, params.page, params.perPage);
+			this.sendResponse({ requestType: 'gitlab:getMergeRequests', success: true, data: mergeRequests })
+		} catch (error: any) {
+			this.sendResponse({ requestType: 'gitlab:getMergeRequests', success: false, data: null, error: error.message })
 
 		}
 	}

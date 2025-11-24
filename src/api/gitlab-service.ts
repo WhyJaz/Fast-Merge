@@ -13,6 +13,12 @@ import {
   GitLabUser
 } from '../shared/gitlab-types';
 
+
+//菜单类型，andt现在支持垂直、水平、和内嵌模式三种
+export declare type MergeRequestsType =
+  'opened' | 'closed' | 'merged' | 'all';
+
+
 export class GitLabService {
   private httpClient: HttpClient;
   private config: FastMergeConfig | null = null;
@@ -137,7 +143,7 @@ export class GitLabService {
         `/projects/${projectId}/merge_requests`,
         options
       );
-      
+
       // 立即返回结果，不等待冲突校验
       console.log('DEBUG: MR创建成功，立即返回:', {
         iid: response.data.iid,
@@ -145,7 +151,7 @@ export class GitLabService {
         merge_status: response.data.merge_status,
         detailed_merge_status: response.data.detailed_merge_status
       });
-      
+
       return {
         success: true,
         merge_request: response.data,
@@ -166,7 +172,7 @@ export class GitLabService {
   async createBranch(projectId: number, branchName: string, ref: string): Promise<GitLabBranch> {
     const response = await this.httpClient.post<GitLabBranch>(
       `/projects/${projectId}/repository/branches`,
-      { 
+      {
         branch: branchName,
         ref: ref
       }
@@ -203,10 +209,10 @@ export class GitLabService {
   async waitForMergeStatusReady(projectId: number, mergeRequestIid: number): Promise<GitLabMergeRequest> {
     const maxAttempts = 30; // 最多尝试30次，避免无限循环
     const intervalMs = 1000; // 每秒检查一次
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
-      
+
       // 如果detailed_merge_status存在且不是checking，说明状态已经确定，返回结果
       // 否则回退到使用merge_status进行检查
       const mergeStatus = mr.detailed_merge_status || mr.merge_status;
@@ -214,14 +220,14 @@ export class GitLabService {
         console.log(`DEBUG: 合并状态已确定，尝试次数: ${attempt}, 状态: ${mergeStatus}`);
         return mr;
       }
-      
+
       // 如果不是最后一次尝试，等待1秒后继续
       if (attempt < maxAttempts) {
         console.log(`DEBUG: 合并状态仍在检查中，第${attempt}次尝试，继续等待...`);
         await new Promise(resolve => setTimeout(resolve, intervalMs));
       }
     }
-    
+
     // 如果达到最大尝试次数仍然是checking状态，返回最后一次的结果
     console.warn(`DEBUG: 达到最大尝试次数(${maxAttempts})，合并状态仍为checking`);
     return await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
@@ -231,20 +237,20 @@ export class GitLabService {
    * 启动异步冲突校验
    */
   startAsyncConflictCheck(
-    projectId: number, 
-    mergeRequestIid: number, 
+    projectId: number,
+    mergeRequestIid: number,
     onStatusUpdate: (result: GitLabMergeRequest) => void
   ): void {
     const key = `${projectId}-${mergeRequestIid}`;
-    
+
     // 如果已经在校验中，先停止之前的校验
     this.stopAsyncConflictCheck(projectId, mergeRequestIid);
-    
+
     console.log(`DEBUG: 启动异步冲突校验: ${key}`);
-    
+
     // 保存回调函数
     this.conflictCheckCallbacks.set(key, onStatusUpdate);
-    
+
     // 立即执行一次检查
     this.performConflictCheck(projectId, mergeRequestIid, 1);
   }
@@ -254,14 +260,14 @@ export class GitLabService {
    */
   stopAsyncConflictCheck(projectId: number, mergeRequestIid: number): void {
     const key = `${projectId}-${mergeRequestIid}`;
-    
+
     const timer = this.conflictCheckTimers.get(key);
     if (timer) {
       clearTimeout(timer);
       this.conflictCheckTimers.delete(key);
       console.log(`DEBUG: 停止异步冲突校验: ${key}`);
     }
-    
+
     this.conflictCheckCallbacks.delete(key);
   }
 
@@ -272,10 +278,10 @@ export class GitLabService {
     const key = `${projectId}-${mergeRequestIid}`;
     const maxAttempts = 30; // 最多尝试30次
     const intervalMs = 1000; // 每秒检查一次
-    
+
     try {
       const mr = await this.checkMergeRequestConflicts(projectId, mergeRequestIid);
-      
+
       // 如果detailed_merge_status存在且不是checking，说明状态已经确定
       const mergeStatus = mr.detailed_merge_status || mr.merge_status;
       if (mergeStatus !== 'checking' && mergeStatus !== 'unchecked') {
@@ -286,19 +292,19 @@ export class GitLabService {
           iid: mr.iid,
           title: mr.title
         });
-        
+
         // 调用回调函数通知状态更新
         const callback = this.conflictCheckCallbacks.get(key);
         if (callback) {
           callback(mr);
         }
-        
+
         // 清理资源
         this.conflictCheckTimers.delete(key);
         this.conflictCheckCallbacks.delete(key);
         return;
       }
-      
+
       // 如果还没达到最大尝试次数，继续检查
       if (attempt < maxAttempts) {
         console.log(`DEBUG: 异步冲突校验中，第${attempt}次尝试，继续等待...`);
@@ -313,14 +319,14 @@ export class GitLabService {
         if (callback) {
           callback(mr);
         }
-        
+
         // 清理资源
         this.conflictCheckTimers.delete(key);
         this.conflictCheckCallbacks.delete(key);
       }
     } catch (error) {
       console.error(`DEBUG: 异步冲突校验失败: ${key}`, error);
-      
+
       // 清理资源
       this.conflictCheckTimers.delete(key);
       this.conflictCheckCallbacks.delete(key);
@@ -334,7 +340,7 @@ export class GitLabService {
     // 创建处理单个目标分支的异步函数
     const processBranch = async (targetBranch: string): Promise<CherryPickResult> => {
       const tempBranchName = `cherry-pick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${targetBranch}`;
-      
+
       try {
         // 基于目标分支创建临时分支
         await this.createBranch(projectId, tempBranchName, targetBranch);
@@ -376,7 +382,7 @@ export class GitLabService {
         } else {
           title = `${options.title_prefix || 'Cherry-pick'}: ${options.commits.join(', ')} to ${targetBranch}`;
         }
-        
+
         const mergeRequestOptions: MergeRequestOptions = {
           title,
           description: options.description || `Cherry-pick commits: ${options.commits.join(', ')}`,
@@ -386,7 +392,7 @@ export class GitLabService {
         };
 
         const result = await this.createMergeRequest(projectId, mergeRequestOptions);
-        
+
         if (result.success && result.merge_request) {
           return {
             target_branch: targetBranch,
@@ -424,10 +430,10 @@ export class GitLabService {
 
     // 并发处理所有目标分支
     const promises = options.target_branches.map(targetBranch => processBranch(targetBranch));
-    
+
     // 等待所有操作完成
     const results = await Promise.all(promises);
-    
+
     return results;
   }
 
@@ -489,12 +495,13 @@ export class GitLabService {
     return commits;
   }
 
+
   /**
    * 获取合并请求列表
    */
   async getMergeRequests(
     projectId: number,
-    state: 'opened' | 'closed' | 'merged' | 'all' = 'opened',
+    state: MergeRequestsType = 'opened',
     page: number = 1,
     perPage: number = 20
   ): Promise<GitLabMergeRequest[]> {
@@ -510,6 +517,7 @@ export class GitLabService {
     );
     return response.data;
   }
+
 
   /**
    * 获取单个合并请求详情

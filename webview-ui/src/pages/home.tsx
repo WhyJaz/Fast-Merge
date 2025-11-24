@@ -4,31 +4,36 @@ import {
   LinkOutlined,
   MergeOutlined,
   SettingOutlined,
-  DeploymentUnitOutlined
+  DeploymentUnitOutlined,
+  OrderedListOutlined
 } from '@ant-design/icons';
 import {
   Alert,
+  Badge,
   Button,
   Space,
   Tabs,
   Tag,
   Typography
 } from 'antd';
-import React from 'react';
+import React, { useState } from 'react';
 import { useConfig } from '../hooks/useConfig';
 import { vscode, } from '../utils/vscode';
 import DevopsPage from './devops';
 import MergePage from './merge';
+import MergeProjects from '@/pages/mergeProjects';
+
 const { Text } = Typography;
 
 
 const Home: React.FC = () => {
   const { configInfo } = useConfig();
+  const [mrCount, setMrCount] = useState<number>(0);
   const tabs = [
     {
       key: 'item-1',
       icon: <MergeOutlined />,
-      tab: '代码合并',
+      tab: '创建MR',
       component: <MergePage />,
       closable: false,
     },
@@ -41,6 +46,14 @@ const Home: React.FC = () => {
     },
     {
       key: 'item-3',
+      icon: <OrderedListOutlined />,
+      tab: <Badge style={{ padding: "0 4px", fontSize: 10 }} size="small" offset={[12, 0]} count={mrCount}><span>MR列表</span></Badge>,
+      component: <MergeProjects setMrCount={setMrCount} />,
+      closable: false,
+      forceRender: true,
+    },
+    {
+      key: 'item-4',
       icon: <HistoryOutlined />,
       tab: '历史记录',
       component: <MergeHistory />,
@@ -87,7 +100,7 @@ const Home: React.FC = () => {
       )}
       <Tabs>
         {tabs.map((tab) => (
-          <Tabs.TabPane key={tab.key} closable={tab.closable} style={{ padding: 8 }} icon={tab.icon} tab={tab.tab}>
+          <Tabs.TabPane key={tab.key} closable={tab.closable} style={{ padding: 8 }} icon={tab.icon} tab={tab.tab} forceRender={tab.forceRender}>
             {tab.component}
           </Tabs.TabPane>
         ))}

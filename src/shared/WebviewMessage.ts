@@ -1,3 +1,4 @@
+import { MergeRequestsType } from '../api/gitlab-service';
 import { GitLabProject, GitLabBranch, GitLabCommit, MergeRequestOptions, CherryPickOptions, MergeResult, CherryPickResult, GitLabConfiguration } from './gitlab-types';
 
 export interface WebviewMessage {
@@ -8,7 +9,7 @@ export interface WebviewMessage {
 
 // GitLab 相关消息类型
 export interface GitLabMessage extends WebviewMessage {
-	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:closeMergeRequest' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate' | 'openExternalLink'
+	type: 'gitlab:getProjects' | 'gitlab:getBranches' | 'gitlab:getCommits' | 'gitlab:getMergeRequests' | 'gitlab:createMergeRequest' | 'gitlab:createCherryPickMR' | 'gitlab:closeMergeRequest' | 'gitlab:getCurrentRepo' | 'gitlab:setConfiguration' | 'gitlab:conflictStatusUpdate' | 'openExternalLink'
 }
 
 // 配置相关消息类型
@@ -42,6 +43,18 @@ export interface GetCommitsMessage extends GitLabMessage {
 		projectId: number
 		branch: string
 		search?: string
+		page?: number
+		perPage?: number
+	}
+}
+
+
+// 获取mr列表
+export interface GetMergeRequestsMessage extends GitLabMessage {
+	type: 'gitlab:getMergeRequests'
+	message: {
+		projectId: number
+		state: MergeRequestsType
 		page?: number
 		perPage?: number
 	}
